@@ -1,0 +1,12 @@
+node_modules
+dist
+docs
+public
+src
+package-lock.json
+postcss.config.js
+tailwind.config.js
+tsconfig.json
+tsconfig.node.json
+vite.config.ts
+.DS_Store

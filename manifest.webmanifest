@@ -1,0 +1,12 @@
+{
+  "name": "Lui Wallet",
+  "short_name": "Wallet",
+  "description": "Dashboard personal de gastos conectado a Google Sheets.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#08090b",
+  "theme_color": "#08090b",
+  "orientation": "portrait-primary",
+  "categories": ["finance", "productivity"],
+  "icons": []
+}

@@ -1,86 +1,761 @@
-const team = ['Wicha','Pacha','Marce','Andrea','Ale'];
-const products = ['Camisa oversize','Camisa fit normal','Hoodie','Gorra','Poster'];
-const designs = ['Jugada destacada','Frase de jugador','Diseno personalizado de jugador'];
-const states = ['Nuevo pedido','En validacion','Boceto pendiente','Boceto subido','En diseno','Mockup enviado','Esperando aprobacion','Cambios solicitados','Aprobado por cliente','Esperando pago','Pagado parcial','Pagado completo','En produccion','Control de calidad','Listo para delivery','Enviado','Entregado','Cerrado','Cancelado'];
-const contentStates = ['Idea','Guion pendiente','Copy pendiente','Diseno pendiente','Video pendiente','En edicion','Listo para publicar','Publicado','Pausado','Descartado'];
-const contentTypes = ['Reel','TikTok','Post simple','Carrusel','Story','Mockup de producto','Behind the scenes','Drop announcement','Trend reaction'];
-const platforms = ['Instagram','TikTok','Reels','Stories','Facebook','Otra'];
-const money = n => `Q${Number(n || 0).toLocaleString('es-GT')}`;
-const today = () => new Date().toISOString().slice(0, 10);
+const {
+  sheetUrl: SHEET_URL,
+  storageKey: STORAGE_KEY,
+  settingsKey: SETTINGS_KEY,
+  summaryKey: SUMMARY_KEY,
+  savingsGoal: SAVINGS_GOAL,
+  categories,
+  initialTransactions,
+  defaultSummary,
+} = window.luiWalletConfig;
+const iconSvg = window.luiIconSvg || (() => "");
 
-let active = 'Overview';
-let filters = { q: '', status: 'Todos', owner: 'Todos', product: 'Todos', design: 'Todos' };
-let orders = [
-  ['MP-001','2026-05-16','Sofia Herrera','5521-9081','Camisa oversize','L','Crudo','Jugada destacada',"Dibu Martinez 120+3'",'DTF','Andrea','Boceto pendiente','2026-05-27','Parcial',325,168,35,'Alta','Mapa tactico atras y mini detalle al frente.'],
-  ['MP-002','2026-05-15','Carlos Mendez','5904-1172','Hoodie','M','Negro','Jugada destacada',"Iniesta 116'",'DTF','Marce','En diseno','2026-05-29','Completo',485,272,30,'Media','Bloque editorial con fecha y estadio.'],
-  ['MP-003','2026-05-14','Ana Luisa','5018-7721','Gorra','Unitalla','Verde oscuro','Frase de jugador','No era penal','Bordado','Pacha','En produccion','2026-05-24','Completo',190,89,25,'Alta','Bordado pequeno tono vino.'],
-  ['MP-004','2026-05-17','Luis Pedro','4770-2388','Camisa fit normal','M','Blanco','Diseno personalizado de jugador','Messi 10 Argentina','DTF','Wicha','Esperando aprobacion','2026-06-01','Parcial',295,144,30,'Media','Plantilla fija con celeste profundo.'],
-  ['MP-005','2026-05-18','Mariana Castillo','4120-6188','Camisa oversize','S','Arena','Jugada destacada','Gol historico Japon','Pendiente de definir','Andrea','En validacion','2026-05-30','Pendiente',315,0,35,'Baja','Definir tecnica.'],
-  ['MP-006','2026-05-18','Diego Fuentes','5755-2900','Camisa oversize','XL','Negro lavado','Jugada destacada',"Dibu Martinez 120+3'",'DTF','Marce','Mockup enviado','2026-05-28','Completo',335,172,35,'Alta','Esperando ok final.'],
-  ['MP-007','2026-05-19','Paula Rivera','5201-4419','Hoodie','S','Gris jaspe','Frase de jugador','Ankara Messi','Bordado','Pacha','Control de calidad','2026-05-25','Completo',455,246,30,'Media','Revisar puntada.'],
-  ['MP-008','2026-05-20','Jose Ramirez','5922-3810','Camisa oversize','M','Crudo','Jugada destacada',"Dibu Martinez 120+3'",'DTF','Ale','Listo para delivery','2026-05-26','Completo',325,168,40,'Alta','Zona 14 despues de las 6pm.'],
-  ['MP-009','2026-05-20','Valeria Pineda','5510-0980','Poster','A3','Off white','Jugada destacada',"Iniesta 116'",'DTF','Marce','Cambios solicitados','2026-05-31','Parcial',175,58,20,'Baja','Version mas minimal.'],
-  ['MP-010','2026-05-21','Fernanda Solis','5633-0147','Gorra','Unitalla','Negro','Frase de jugador','No era penal','Bordado','Ale','Enviado','2026-05-25','Completo',190,89,25,'Media','Guia enviada.'],
-  ['MP-011','2026-05-22','Roberto Arzu','4099-7550','Camisa fit normal','L','Blanco','Diseno personalizado de jugador','Messi 10 Argentina','DTF','Wicha','Esperando pago','2026-06-02','Pendiente',295,144,30,'Media','Confirmar pago.'],
-  ['MP-012','2026-05-23','Camila Ortiz','4210-5590','Camisa oversize','M','Crudo','Jugada destacada',"Dibu Martinez 120+3'",'DTF','Andrea','Boceto subido','2026-06-03','Parcial',325,168,35,'Alta','Boceto listo.'],
-  ['MP-013','2026-05-24','Nico Barrios','4991-2100','Hoodie','L','Verde oscuro','Jugada destacada',"Dibu Martinez 120+3'",'DTF','Marce','En diseno','2026-06-04','Completo',495,278,35,'Media','Mockup en hoodie oscuro.'],
-  ['MP-014','2026-05-24','Majo Reyes','4666-7811','Camisa oversize','S','Arena','Jugada destacada',"Dibu Martinez 120+3'",'DTF','Pacha','En produccion','2026-06-05','Completo',325,168,35,'Alta','Evaluar stock.'],
-  ['MP-015','2026-05-25','Andres Molina','5412-8809','Camisa fit normal','M','Crudo','Diseno personalizado de jugador','Cristiano 7 Portugal','DTF','Wicha','Nuevo pedido','2026-06-06','Pendiente',295,142,30,'Baja','Lead desde story.'],
-  ['MP-016','2026-05-25','Gaby Leon','5030-0119','Gorra','Unitalla','Crudo','Frase de jugador','No era penal','Bordado','Ale','Entregado','2026-05-26','Completo',190,89,25,'Baja','Cliente confirmo recibido.']
-].map(rowToOrder);
-let contents = [
-  ['CT-001','2026-05-20','Reel sobre tapada iconica','Dibu Martinez / Argentina','Reel','Reels','Camisa oversize','Wicha','Idea','Alta','2026-05-27','Usar tension del 120+3.'],
-  ['CT-002','2026-05-21','Mockup de camisa oversize','Argentina','Mockup de producto','Instagram','Camisa oversize','Marce','Diseno pendiente','Alta','2026-05-28','Frente y espalda.'],
-  ['CT-003','2026-05-22','Story de preventa','Matchpiece drop inicial','Story','Stories','Hoodie','Wicha','Copy pendiente','Media','2026-05-29','Lista por DM.'],
-  ['CT-004','2026-05-23','Trend reaction despues de partido','Mundial / partido del dia','Trend reaction','TikTok','Camisa fit normal','Wicha','Guion pendiente','Alta','2026-05-27','Reaccion rapida.'],
-  ['CT-005','2026-05-24','Behind the scenes bordado','No era penal','Behind the scenes','Instagram','Gorra','Pacha','Video pendiente','Media','2026-05-30','Closeups de puntada.'],
-  ['CT-006','2026-05-25','Drop announcement inicial','Matchpiece','Drop announcement','Instagram','Camisa oversize','Wicha','Listo para publicar','Alta','2026-05-26','Copy aprobado.'],
-  ['CT-007','2026-05-25','Carrusel archivo tactico',"Iniesta 116'",'Carrusel','Instagram','Hoodie','Marce','En edicion','Media','2026-05-31','Editorial 4 slides.'],
-  ['CT-008','2026-05-26','Post simple frase','No era penal','Post simple','Facebook','Gorra','Wicha','Publicado','Baja','2026-05-26','Publicado.']
-].map(rowToContent);
+const state = {
+  activeTab: "home",
+  query: "",
+  selectedCategory: "fun",
+  transactions: load(STORAGE_KEY, initialTransactions),
+  settings: load(SETTINGS_KEY, { webhookUrl: "", monthlyBudget: 10500, monthlyGoal: SAVINGS_GOAL, theme: "dark" }),
+  summary: load(SUMMARY_KEY, defaultSummary),
+};
 
-function rowToOrder(r){const [id,date,client,phone,product,size,color,design,request,technique,owner,status,promised,payment,price,cost,delivery,priority,notes]=r;return {id,date,client,phone,product,size,color,design,request,technique,owner,status,promised,payment,price,cost,delivery,priority,notes};}
-function rowToContent(r){const [id,date,topic,player,type,platform,product,owner,status,priority,publish,notes]=r;return {id,date,topic,player,type,platform,product,owner,status,priority,publish,notes};}
-function profit(o){return o.price-o.cost-o.delivery;}
-function received(o){return o.payment==='Completo'?o.price:o.payment==='Parcial'?Math.round(o.price*.5):0;}
-function late(o){return o.promised<today() && !['Entregado','Cerrado','Cancelado'].includes(o.status);}
-function tag(x,t=''){return `<span class='chip ${t}'>${x}</span>`;}
-function priority(x){return tag(x,x==='Alta'?'wine':x==='Media'?'blue':'');}
-function mode(list){const c={};list.forEach(x=>c[x]=(c[x]||0)+1);return Object.entries(c).sort((a,b)=>b[1]-a[1])[0]?.[0]||'-';}
-function group(list,key,sum){return list.reduce((a,x)=>{a[x[key]]=(a[x[key]]||0)+(sum?sum(x):1);return a;},{});}
+const moneyFormatter = new Intl.NumberFormat("es-GT", { style: "currency", currency: "GTQ", maximumFractionDigits: 2 });
+const compactFormatter = new Intl.NumberFormat("es-GT", { style: "currency", currency: "GTQ", notation: "compact", maximumFractionDigits: 1 });
+const root = document.querySelector("#root");
 
-function metrics(){const sales=orders.reduce((s,o)=>s+o.price,0), costs=orders.reduce((s,o)=>s+o.cost+o.delivery,0), delivered=orders.filter(o=>['Entregado','Cerrado'].includes(o.status)).length;return [
- ['Pedidos totales',orders.length],['Pedidos nuevos',orders.filter(o=>o.status==='Nuevo pedido').length],['Pedidos en proceso',orders.length-delivered],['Pedidos faltantes',orders.length-delivered],['Pedidos entregados',delivered],['Ventas totales',money(sales)],['Dinero recibido',money(orders.reduce((s,o)=>s+received(o),0))],['Dinero pendiente',money(orders.reduce((s,o)=>s+o.price-received(o),0))],['Costos acumulados',money(costs)],['Ganancia estimada',money(sales-costs)],['Pedidos atrasados',orders.filter(late).length],['Diseno mas solicitado',mode(orders.map(o=>o.request))],['Producto mas vendido',mode(orders.map(o=>o.product))]
-];}
-function card([label,value]){return `<article class='metric'><div class='dot'></div><strong>${value}</strong><div class='label'>${label}</div></article>`;}
-function head(title,text,action=''){return `<div class='section-head'><div><div class='section-kicker'>MATCHPIECE</div><h2>${title}</h2><p>${text}</p></div>${action}</div>`;}
-function hero(){const d=new Intl.DateTimeFormat('es-GT',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date());return `<header class='hero'><div class='hero-content'><span class='date-chip'>${d}</span><h1>Matchpiece</h1><div class='hero-sub'>by LUI Playbook</div><div class='hero-copy'>Control de piezas, jugadas y entregas en tiempo real.</div><div class='hero-actions'><button class='button primary' data-order>Nuevo pedido</button><button class='button dark' data-content>Nuevo contenido</button><button class='button' onclick='render()'>Actualizar</button></div></div></header>`;}
-function nav(){const sections=['Overview','Pedidos','Kanban','Diseno','Produccion','Logistica','Finanzas','Stock / Oportunidad','Contenido / Redes'];return `<aside class='sidebar'><div class='brand-mark'><div class='mark-field'></div><div><div class='brand-kicker'>MATCHPIECE</div><div class='brand-title'>LUI Playbook</div></div></div><nav class='nav'>${sections.map(s=>`<button class='${active===s?'active':''}' data-section='${s}'><span>${s}</span><span>+</span></button>`).join('')}</nav><div class='role-stack'><div class='section-kicker'>Equipo y roles</div>${team.map(t=>`<div class='role-pill'><span><b>${t}</b><br>${role(t)}</span></div>`).join('')}</div></aside>`;}
-function role(t){return {Wicha:'CEO / Direccion general',Pacha:'Produccion',Marce:'Diseno grafico',Andrea:'Boceto tactico / Jugadas',Ale:'Logistica'}[t];}
-function flow(){return `<section class='panel'><div class='panel-pad'><div class='section-kicker'>Studio Flow</div></div><div class='flow'>${['Pedido','Boceto','Diseno','Aprobacion','Produccion','Delivery','Cerrado'].map(s=>`<div class='flow-step'><span class='flow-dot'></span><span>${s}</span></div>`).join('')}</div></section>`;}
-function overview(){return `<section class='section'>${head('Overview','Datos generales del lanzamiento, flujo de trabajo y roles del studio.')}<div class='metrics'>${metrics().map(card).join('')}</div>${flow()}<div class='cards-grid'>${team.map(t=>`<article class='info-card'><span class='chip'>${t}</span><h3>${role(t)}</h3><p>${roleText(t)}</p></article>`).join('')}</div></section>`;}
-function roleText(t){return {Wicha:'Supervisa dashboard, vision visual y decisiones importantes.',Pacha:'Fabrica, bordado, DTF, costos y tiempos.',Marce:'Mockups, archivos finales y linea grafica.',Andrea:'Analiza jugadas, recorridos, pases y bocetos.',Ale:'Direcciones, envios, confirmaciones y costos de delivery.'}[t];}
-function filterBar(){const sel=(k,label,opts)=>`<div class='field'><label>${label}</label><select data-filter='${k}'>${opts.map(o=>`<option ${filters[k]===o?'selected':''}>${o}</option>`).join('')}</select></div>`;return `<div class='filters'><div class='field'><label>Buscar</label><input data-filter='q' value='${filters.q}' placeholder='Cliente o ID'></div>${sel('status','Estado',['Todos',...states])}${sel('owner','Responsable',['Todos',...team])}${sel('product','Producto',['Todos',...products])}${sel('design','Tipo de diseno',['Todos',...designs])}</div>`;}
-function visibleOrders(){const q=filters.q.toLowerCase();return orders.filter(o=>(!q||o.client.toLowerCase().includes(q)||o.id.toLowerCase().includes(q))&&(filters.status==='Todos'||o.status===filters.status)&&(filters.owner==='Todos'||o.owner===filters.owner)&&(filters.product==='Todos'||o.product===filters.product)&&(filters.design==='Todos'||o.design===filters.design));}
-function ordersTable(rows){const hs=['ID pedido','Fecha','Cliente','Telefono','Producto','Talla','Color','Tipo de diseno','Jugada / frase / jugador','Tecnica','Responsable','Estado','Fecha prometida','Pago','Precio venta','Costo estimado','Ganancia','Delivery','Prioridad','Notas'];return `<div class='table-wrap'><table class='table'><thead><tr>${hs.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(o=>`<tr class='${late(o)?'late':''}'><td><b>${o.id}</b>${late(o)?'<br>'+tag('Atrasado','wine'):''}</td><td>${o.date}</td><td>${o.client}</td><td>${o.phone}</td><td>${o.product}</td><td>${o.size}</td><td>${o.color}</td><td>${o.design}</td><td><b>${o.request}</b></td><td>${tag(o.technique,'blue')}</td><td>${o.owner}</td><td>${tag(o.status)}</td><td>${o.promised}</td><td>${tag(o.payment,o.payment==='Pendiente'?'wine':o.payment==='Parcial'?'blue':'')}</td><td>${money(o.price)}</td><td>${money(o.cost)}</td><td>${money(profit(o))}</td><td>${money(o.delivery)}</td><td>${priority(o.priority)}</td><td>${o.notes}</td></tr>`).join('')}</tbody></table></div>`;}
-function pedidos(){return `<section class='section'>${head('Pedidos','Tabla principal con filtros, busqueda, pagos y control operativo.',`<button class='button primary' data-order>Nuevo pedido</button>`)}<div class='panel'>${filterBar()}${ordersTable(visibleOrders())}</div></section>`;}
-function lane(name,rows){return `<div class='lane'><h3>${name}<span>${rows.length}</span></h3>${rows.map(o=>`<article class='order-card ${late(o)?'late':''}'><span class='chip dark'>${o.id}</span><strong>${o.client}</strong><div class='mini'>${o.product} / ${o.design}</div>${tag(o.status)}<div class='mini'>${o.owner} - ${o.promised}</div>${late(o)?tag('Atrasado','wine'):''}</article>`).join('')}</div>`;}
-function kanban(){const lanes={'NEW ORDERS':['Nuevo pedido','En validacion'],'SKETCH / PLAY':['Boceto pendiente','Boceto subido'],DESIGN:['En diseno','Mockup enviado','Esperando aprobacion','Cambios solicitados','Aprobado por cliente'],PAYMENT:['Esperando pago','Pagado parcial','Pagado completo'],PRODUCTION:['En produccion','Control de calidad'],DELIVERY:['Listo para delivery','Enviado','Entregado'],CLOSED:['Cerrado','Cancelado']};return `<section class='section'>${head('Kanban','Ordenes de produccion por estado general.')}<div class='kanban'>${Object.entries(lanes).map(([k,v])=>lane(k,orders.filter(o=>v.includes(o.status)))).join('')}</div></section>`;}
-function simpleSection(title,text,rows,cols,map){return `<section class='section'>${head(title,text)}<div class='panel'>${table(rows,cols,map)}</div></section>`;}
-function table(rows,cols,map){return `<div class='table-wrap'><table class='table'><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${map(r).map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
-function diseno(){const st=['Boceto pendiente','Boceto subido','En diseno','Mockup enviado','Cambios solicitados'];return simpleSection('Diseno','Bocetos tacticos de Andrea y diseno grafico de Marce.',orders.filter(o=>st.includes(o.status)),['ID','Cliente','Tipo','Solicitud','Responsable','Estado','Fecha','Notas','Archivo'],o=>[o.id,o.client,o.design,o.request,o.owner,tag(o.status),o.promised,o.notes,tag('Placeholder','blue')]);}
-function produccion(){const st=['Pagado completo','En produccion','Control de calidad','Listo para delivery'];return simpleSection('Produccion','Control de fabrica, bordado, DTF, costos y fechas con Pacha.',orders.filter(o=>st.includes(o.status)),['ID','Producto','Talla','Color','Tecnica','Responsable','Estado produccion','Finalizacion','Costo'],o=>[o.id,o.product,o.size,o.color,tag(o.technique,'blue'),'Pacha',o.status==='Control de calidad'?tag('En revision','blue'):o.technique==='Bordado'?tag('En bordado','blue'):tag('En DTF','blue'),o.promised,money(o.cost)]);}
-function logistica(){const st=['Listo para delivery','Enviado','Entregado','Cerrado'];return simpleSection('Delivery','Envios, direcciones resumidas, costos y confirmaciones con Ale.',orders.filter(o=>st.includes(o.status)),['ID','Cliente','Telefono','Direccion','Producto','Estado entrega','Fecha entrega','Costo delivery','Notas'],o=>[o.id,o.client,o.phone,['Zona 10','Zona 14','Zona 15','Cayala','Antigua'][o.id.charCodeAt(5)%5],o.product,tag(o.status),o.promised,money(o.delivery),o.notes]);}
-function finanzas(){const sales=orders.reduce((s,o)=>s+o.price,0),costs=orders.reduce((s,o)=>s+o.cost+o.delivery,0);const ms=[['Ventas totales',money(sales)],['Dinero recibido',money(orders.reduce((s,o)=>s+received(o),0))],['Dinero pendiente',money(orders.reduce((s,o)=>s+o.price-received(o),0))],['Costos acumulados',money(costs)],['Ganancia estimada',money(sales-costs)],['Ticket promedio',money(Math.round(sales/orders.length))],['Pagados completos',orders.filter(o=>o.payment==='Completo').length],['Pago parcial',orders.filter(o=>o.payment==='Parcial').length]];return `<section class='section'>${head('Finanzas','Ventas, costos, pagos y margen estimado.')}<div class='metrics'>${ms.map(card).join('')}</div><div class='chart-grid'>${chart('Ventas por dia',group(orders,'date',o=>o.price),money)}${chart('Pedidos por producto',group(orders,'product'))}${chart('Pedidos por tecnica',group(orders,'technique'))}${chart('Ganancia por producto',group(orders,'product',profit),money)}</div></section>`;}
-function chart(title,data,fmt=x=>x){const e=Object.entries(data),max=Math.max(1,...e.map(x=>x[1]));return `<article class='chart'><h3>${title}</h3>${e.map(([k,v])=>`<div class='bar-row'><span>${k}</span><div class='bar'><i style='width:${Math.max(5,v/max*100)}%'></i></div><b>${fmt(v)}</b></div>`).join('')}</article>`;}
-function stock(){const rows=Object.values(orders.reduce((a,o)=>{a[o.request]??={name:o.request,count:0,products:[],tech:[],gain:0};a[o.request].count++;a[o.request].products.push(o.product);a[o.request].tech.push(o.technique);a[o.request].gain+=profit(o);return a;},{})).sort((a,b)=>b.count-a.count);return simpleSection('Stock / Oportunidad','Detecta disenos que podrian producirse en stock segun demanda.',rows,['Diseno solicitado','Veces pedido','Producto mas solicitado','Tecnica mas usada','Ganancia promedio','Recomendacion'],r=>[r.name,r.count,mode(r.products),mode(r.tech),money(Math.round(r.gain/r.count)),r.count>=5?tag('Evaluar stock','wine'):tag('Bajo pedido')]);}
-function contenido(){return `<section class='section'>${head('Contenido / Redes','Centro de reaccion para jugadas, frases y momentos virales.',`<button class='button primary' data-content>Nuevo contenido</button>`)}<div class='metrics'>${[['Ideas activas',contents.filter(c=>c.status==='Idea').length],['En produccion',contents.filter(c=>['Guion pendiente','Copy pendiente','Diseno pendiente','Video pendiente','En edicion'].includes(c.status)).length],['Listos para publicar',contents.filter(c=>c.status==='Listo para publicar').length],['Publicados',contents.filter(c=>c.status==='Publicado').length],['Urgentes',contents.filter(c=>c.priority==='Alta'&&c.status!=='Publicado').length],['Trends pendientes',contents.filter(c=>c.type==='Trend reaction'&&c.status!=='Publicado').length]].map(card).join('')}</div><div class='note'>Higgsfield se usara mas adelante como herramienta de apoyo para videos, animaciones, mockups dinamicos y contenido visual de lanzamiento.</div><div class='kanban content'>${contentKanban()}</div><div class='panel'>${table(contents,['ID contenido','Fecha','Tema / momento','Jugador / pais / equipo','Tipo','Plataforma','Producto','Responsable','Estado','Prioridad','Fecha sugerida','Copy','Diseno','Video','Notas'],c=>[c.id,c.date,c.topic,c.player,c.type,c.platform,c.product,c.owner,tag(c.status),priority(c.priority),c.publish,c.status==='Copy pendiente'?tag('Si','wine'):tag('No'),c.status==='Diseno pendiente'?tag('Si','wine'):tag('No'),c.status==='Video pendiente'?tag('Si','wine'):tag('No'),c.notes])}</div></section>`;}
-function contentKanban(){const lanes={IDEAS:['Idea'],'COPY / SCRIPT':['Guion pendiente','Copy pendiente'],DESIGN:['Diseno pendiente'],VIDEO:['Video pendiente','En edicion'],READY:['Listo para publicar'],PUBLISHED:['Publicado']};return Object.entries(lanes).map(([k,v])=>`<div class='lane'><h3>${k}<span>${contents.filter(c=>v.includes(c.status)).length}</span></h3>${contents.filter(c=>v.includes(c.status)).map(c=>`<article class='order-card'><span class='chip dark'>${c.id}</span><strong>${c.topic}</strong><div class='mini'>${c.platform} / ${c.type}</div>${tag(c.status)}<div class='mini'>${c.owner} - ${c.publish}</div>${priority(c.priority)}</article>`).join('')}</div>`).join('');}
-function modalOrder(){return `<div class='modal' id='order-modal'><div class='modal-dialog'><div class='modal-head'><h2>Nuevo pedido</h2><button class='button' data-close>Cerrar</button></div><form id='order-form'>${input('client','Cliente','Cliente nuevo')}${input('phone','Telefono','5555-0000')}${select('product','Producto',products)}${input('size','Talla','M')}${input('color','Color','Crudo')}${select('design','Tipo de diseno',designs)}${input('request','Jugada / frase / jugador','Gol viral')}${select('technique','Tecnica',['Bordado','DTF','Pendiente de definir'])}${select('owner','Responsable actual',team)}${input('promised','Fecha prometida',today(),'date')}${select('payment','Pago',['Pendiente','Parcial','Completo'])}${input('price','Precio venta','325','number')}${input('cost','Costo estimado','160','number')}${input('delivery','Delivery','35','number')}${select('priority','Prioridad',['Alta','Media','Baja'])}${textarea('notes','Notas','Detalle del pedido')}<div class='modal-actions'><button type='button' class='button' data-close>Cancelar</button><button class='button primary'>Guardar pedido</button></div></form></div></div>`;}
-function modalContent(){return `<div class='modal' id='content-modal'><div class='modal-dialog'><div class='modal-head'><h2>Nuevo contenido</h2><button class='button' data-close>Cerrar</button></div><form id='content-form'>${input('topic','Tema / momento','Trend de partido')}${input('player','Jugador / pais / equipo','Argentina')}${select('type','Tipo de contenido',contentTypes)}${select('platform','Plataforma',platforms)}${select('product','Producto relacionado',products)}${select('owner','Responsable',team)}${select('priority','Prioridad',['Alta','Media','Baja'])}${input('publish','Fecha sugerida',today(),'date')}${textarea('notes','Notas','Idea inicial')}<div class='modal-actions'><button type='button' class='button' data-close>Cancelar</button><button class='button primary'>Guardar contenido</button></div></form></div></div>`;}
-function input(n,l,v,t='text'){return `<div class='field'><label>${l}</label><input name='${n}' type='${t}' value='${v}' required></div>`;}
-function select(n,l,opts){return `<div class='field'><label>${l}</label><select name='${n}'>${opts.map(o=>`<option>${o}</option>`).join('')}</select></div>`;}
-function textarea(n,l,v){return `<div class='field full'><label>${l}</label><textarea name='${n}'>${v}</textarea></div>`;}
-function render(){const map={Overview:overview,Pedidos:pedidos,Kanban:kanban,Diseno:diseno,Produccion:produccion,Logistica:logistica,Finanzas:finanzas,'Stock / Oportunidad':stock,'Contenido / Redes':contenido};document.getElementById('app').innerHTML=`<div class='app'><div class='shell'>${nav()}<main class='main'>${hero()}${map[active]()}</main></div>${modalOrder()}${modalContent()}</div>`;bind();}
-function bind(){document.querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>{active=b.dataset.section;render();});document.querySelectorAll('[data-filter]').forEach(i=>i.oninput=()=>{filters[i.dataset.filter]=i.value;render();});document.querySelectorAll('[data-order]').forEach(b=>b.onclick=()=>document.getElementById('order-modal').classList.add('open'));document.querySelectorAll('[data-content]').forEach(b=>b.onclick=()=>document.getElementById('content-modal').classList.add('open'));document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>document.querySelectorAll('.modal').forEach(m=>m.classList.remove('open')));document.getElementById('order-form').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));orders=[rowToOrder([`MP-${String(orders.length+1).padStart(3,'0')}`,today(),d.client,d.phone,d.product,d.size,d.color,d.design,d.request,d.technique,d.owner,'Nuevo pedido',d.promised,d.payment,+d.price,+d.cost,+d.delivery,d.priority,d.notes]),...orders];active='Pedidos';render();};document.getElementById('content-form').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));contents=[rowToContent([`CT-${String(contents.length+1).padStart(3,'0')}`,today(),d.topic,d.player,d.type,d.platform,d.product,d.owner,'Idea',d.priority,d.publish,d.notes]),...contents];active='Contenido / Redes';render();};}
+function load(key, fallback) {
+  try {
+    const stored = window.localStorage.getItem(key);
+    if (!stored) return fallback;
+    const parsed = JSON.parse(stored);
+    if (Array.isArray(fallback)) return Array.isArray(parsed) ? parsed : fallback;
+    return { ...fallback, ...parsed };
+  } catch {
+    return fallback;
+  }
+}
+
+function persist() {
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.transactions));
+  window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings));
+  window.localStorage.setItem(SUMMARY_KEY, JSON.stringify(state.summary));
+}
+
+function numberOr(value, fallback = 0) {
+  if (value === undefined || value === null || value === "") return fallback;
+  const parsed = Number(String(value ?? "").replace(/[^\d.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function clamp(value, min = 0, max = 1) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function formatMoney(value) {
+  return moneyFormatter.format(numberOr(value)).replace("GTQ", "Q");
+}
+
+function shortMoney(value) {
+  return compactFormatter.format(numberOr(value)).replace("GTQ", "Q");
+}
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function monthName(dateValue) {
+  const date = new Date(`${dateValue}T12:00:00`);
+  return new Intl.DateTimeFormat("es-GT", { month: "long" }).format(date).replace(/^\w/, (letter) => letter.toUpperCase());
+}
+
+function prettyDate(dateValue) {
+  const date = new Date(`${dateValue}T12:00:00`);
+  return new Intl.DateTimeFormat("es-GT", { day: "numeric", month: "short" }).format(date);
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function normalizeText(value = "") {
+  return String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function makeId(prefix = "tx") {
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function getMonthTransactions() {
+  return state.transactions
+    .filter((transaction) => transaction.date.startsWith("2026-09"))
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function getLocalTotals() {
+  const monthTransactions = getMonthTransactions();
+  const income = monthTransactions.filter((item) => item.amount > 0).reduce((sum, item) => sum + item.amount, 0);
+  const spent = Math.abs(monthTransactions.filter((item) => item.amount < 0).reduce((sum, item) => sum + item.amount, 0));
+  const categoryTotals = Object.fromEntries(
+    categories.map((category) => [
+      category.key,
+      Math.abs(monthTransactions.filter((item) => item.category === category.key && item.amount < 0).reduce((sum, item) => sum + item.amount, 0)),
+    ]),
+  );
+
+  return { income, spent, categoryTotals };
+}
+
+function getTotals() {
+  const local = getLocalTotals();
+  const summary = { ...defaultSummary, ...state.summary, categoryTotals: { ...defaultSummary.categoryTotals, ...(state.summary.categoryTotals || {}) } };
+  const totalReceived = numberOr(summary.totalReceived, local.income);
+  const totalExpenses = numberOr(summary.totalExpenses, local.spent);
+  const saldoAlDia = numberOr(summary.saldoAlDia, totalReceived - totalExpenses);
+  const ahorro = numberOr(summary.ahorro, state.settings.monthlyGoal || SAVINGS_GOAL);
+  const progressBase = totalReceived > 0 ? totalReceived : state.settings.monthlyBudget;
+  const budgetProgress = progressBase > 0 ? clamp((totalReceived - saldoAlDia) / progressBase) : 0;
+  const goalProgress = clamp(saldoAlDia / (state.settings.monthlyGoal || SAVINGS_GOAL));
+  const byCategory = categories.map((category) => {
+    const spent = numberOr(summary.categoryTotals[category.key], local.categoryTotals[category.key]);
+    const progress = totalExpenses > 0 ? clamp(spent / totalExpenses) : 0;
+    return { ...category, spent, progress };
+  });
+  const credits = Array.isArray(summary.credits) && summary.credits.length ? summary.credits : defaultSummary.credits;
+
+  return {
+    income: totalReceived,
+    spent: totalExpenses,
+    available: saldoAlDia,
+    ahorro,
+    budgetProgress,
+    goalProgress,
+    byCategory,
+    credits,
+    month: summary.month || "Septiembre",
+  };
+}
+
+function getFilteredTransactions() {
+  const terms = normalizeText(state.query).split(/\s+/).filter(Boolean);
+  const monthTransactions = getMonthTransactions();
+  if (!terms.length) return monthTransactions;
+
+  return monthTransactions.filter((transaction) => {
+    const meta = categoryMeta(transaction.category);
+    const haystack = normalizeText([
+      transaction.description,
+      transaction.account,
+      transaction.category,
+      meta.label,
+      transaction.note || "",
+      prettyDate(transaction.date),
+      formatMoney(transaction.amount),
+    ].join(" "));
+
+    return terms.every((term) => haystack.includes(term));
+  });
+}
+
+function budgetCopy(tone) {
+  if (tone === "danger") return "Ojo, revisa antes de gastar más";
+  if (tone === "warning") return "Vas cerca del límite";
+  return "Vas con buen margen";
+}
+
+function budgetMessage(totals) {
+  if (totals.budgetProgress >= 0.9) return `Ya usaste casi todo el margen. Saldo al día: ${formatMoney(totals.available)}.`;
+  if (totals.budgetProgress >= 0.7) return `Vas bien, pero conviene bajar el ritmo. Saldo al día: ${formatMoney(totals.available)}.`;
+  return `Vas bien, aún tienes margen. Saldo al día: ${formatMoney(totals.available)}.`;
+}
+
+function getAiAdvice(totals) {
+  const highest = totals.byCategory.slice().sort((a, b) => b.spent - a.spent)[0];
+  if (totals.budgetProgress >= 0.9) return `Prioriza pagos fijos y pausa extras: tu saldo al día bajó a ${formatMoney(totals.available)}.`;
+  if (totals.budgetProgress >= 0.7) return `Cuida ${highest.label.toLowerCase()}: es donde más se está moviendo el gasto este mes.`;
+  if (totals.available >= SAVINGS_GOAL) return `Buen ritmo: tienes margen para proteger tu meta de ${formatMoney(SAVINGS_GOAL)}.`;
+  return "Vas estable; si hoy evitas gastos pequeños, el ahorro sube más rápido.";
+}
+
+function categoryMeta(categoryKey) {
+  if (categoryKey === "income") return { label: "Ingreso", accent: "#a3ff12", icon: "+" };
+  const category = categories.find((item) => item.key === categoryKey) || categories[0];
+  return { label: category.label, accent: category.accent, icon: category.icon };
+}
+
+function render() {
+  const totals = getTotals();
+  const filteredTransactions = getFilteredTransactions();
+  const queueCount = state.transactions.filter((item) => item.syncState === "queued" || item.syncState === "failed").length;
+  const budgetTone = totals.budgetProgress >= 0.9 ? "danger" : totals.budgetProgress >= 0.7 ? "warning" : "good";
+
+  root.innerHTML = `
+    <main class="app-canvas" data-theme="${state.settings.theme}">
+      <section class="phone-shell" aria-label="LUI wallet app">
+        <div class="screen">
+          <header class="topbar">
+            <div>
+              <p class="eyebrow">Gastos 2026</p>
+              <h1>Lui Wallet</h1>
+            </div>
+            <div class="top-actions">
+              <button class="refresh-button" type="button" data-action="refresh-app" aria-label="Refrescar dashboard">${iconSvg("refresh")}</button>
+            </div>
+          </header>
+
+          ${renderActiveTab({ totals, filteredTransactions, queueCount, budgetTone })}
+
+          <nav class="bottom-nav" aria-label="Navegacion principal">
+            ${navButton("home", "Home", "home")}
+            ${navButton("activity", "Gastos", "list")}
+            <button class="fab" type="button" data-action="open-composer" aria-label="Agregar gasto">+</button>
+            ${navButton("insights", "Insights", "chart")}
+            ${navButton("settings", "Ajustes", "settings")}
+          </nav>
+        </div>
+      </section>
+
+      <aside class="desktop-summary" aria-label="Resumen del dashboard">
+        <p class="eyebrow">Personal finance</p>
+        <h2>${getAiAdvice(totals)}</h2>
+        <p>${budgetCopy(budgetTone)}. El flujo del mes marca ${formatMoney(totals.income)} recibido y ${formatMoney(totals.spent)} gastado.</p>
+        <div class="desktop-kpis">
+          <span>${formatMoney(totals.available)} saldo al día</span>
+          <span>${formatMoney(totals.ahorro)} ahorro</span>
+          <span>${Math.round(totals.budgetProgress * 100)}% usado</span>
+          <span>${queueCount} pendientes</span>
+        </div>
+      </aside>
+
+      <div id="modal-root"></div>
+      <div id="toast-root"></div>
+    </main>
+  `;
+
+  bindEvents();
+}
+
+function renderActiveTab({ totals, filteredTransactions, queueCount, budgetTone }) {
+  if (state.activeTab === "activity") {
+    return `
+      <div class="view-stack">
+        <div class="search-row">
+          ${iconSvg("search")}
+          <input data-action="search" value="${escapeHtml(state.query)}" placeholder="Buscar por palabra, cuenta, fecha o monto" />
+          <button class="filter-button" type="button" data-action="clear-search" aria-label="Limpiar búsqueda">${state.query ? "X" : iconSvg("sliders")}</button>
+        </div>
+        <section class="activity-panel activity-panel--full">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">${totals.month}</p>
+              <h2>${filteredTransactions.length} movimientos</h2>
+            </div>
+            <button class="sync-button" type="button" data-action="refresh-app" aria-label="Refrescar movimientos">Sync</button>
+          </div>
+          ${transactionList(filteredTransactions)}
+        </section>
+      </div>
+    `;
+  }
+
+  if (state.activeTab === "insights") {
+    return `
+      <div class="view-stack">
+        <section class="insight-hero">
+          <span>AI</span>
+          <p>${getAiAdvice(totals)}</p>
+        </section>
+        <section class="credit-list" aria-label="Créditos">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Créditos</p>
+              <h2>Nombre - monto</h2>
+            </div>
+          </div>
+          ${totals.credits.map(creditRow).join("")}
+        </section>
+        <section class="goal-card">
+          <div>
+            <p class="eyebrow">Meta de ahorro</p>
+            <h2>${formatMoney(totals.available)} / ${formatMoney(SAVINGS_GOAL)}</h2>
+          </div>
+          <div class="ring" style="--ring: ${totals.goalProgress * 360}deg">${Math.round(totals.goalProgress * 100)}%</div>
+        </section>
+      </div>
+    `;
+  }
+
+  if (state.activeTab === "settings") {
+    return `
+      <div class="view-stack">
+        <section class="settings-panel">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Sync</p>
+              <h2>Google Sheets</h2>
+            </div>
+            <button class="sync-button" type="button" data-action="refresh-app">Sync</button>
+          </div>
+          <label>
+            Webhook Apps Script
+            <input data-action="setting" data-setting="webhookUrl" value="${escapeHtml(state.settings.webhookUrl)}" placeholder="https://script.google.com/macros/s/..." />
+          </label>
+          <a href="${SHEET_URL}" target="_blank" rel="noreferrer">Abrir Gastos 2026</a>
+        </section>
+        <section class="settings-panel">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Apariencia</p>
+              <h2>Versión ${state.settings.theme === "light" ? "white" : "black"}</h2>
+            </div>
+          </div>
+          <div class="segmented segmented--two" aria-label="Tema">
+            <button type="button" class="${state.settings.theme === "dark" ? "active" : ""}" data-theme-choice="dark">Black</button>
+            <button type="button" class="${state.settings.theme === "light" ? "active" : ""}" data-theme-choice="light">White</button>
+          </div>
+        </section>
+        <section class="settings-panel">
+          <div class="section-title">
+            <div>
+              <p class="eyebrow">Controles</p>
+              <h2>Límites del mes</h2>
+            </div>
+          </div>
+          <label>
+            Límite de gastos al mes
+            <input type="number" data-action="setting-number" data-setting="monthlyBudget" value="${state.settings.monthlyBudget}" />
+          </label>
+          <label>
+            Meta de ahorro
+            <input type="number" data-action="setting-number" data-setting="monthlyGoal" value="${state.settings.monthlyGoal}" />
+          </label>
+        </section>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="view-stack">
+      <section class="wallet-card" aria-label="Saldo al día">
+        <div class="wallet-card__glow"></div>
+        <div class="wallet-card__head">
+          <span>${totals.month}</span>
+          <button class="sync-pill ${queueCount ? "sync-pill--queue" : ""}" type="button" data-action="refresh-app">${queueCount ? `${queueCount} en cola` : "Sheets OK"}</button>
+        </div>
+        <p class="wallet-label">Saldo al día</p>
+        <strong>${formatMoney(totals.available)}</strong>
+        <div class="quick-kpis" aria-label="Resumen rápido del mes">
+          <div><span>Gastado</span><b>${shortMoney(totals.spent)}</b></div>
+          <div><span>Recibido</span><b>${shortMoney(totals.income)}</b></div>
+          <div><span>Estado</span><b>${Math.round(totals.budgetProgress * 100)}%</b></div>
+        </div>
+        <div class="wallet-actions wallet-actions--single">
+          <button class="add-only-button" type="button" data-action="open-composer" aria-label="Agregar movimiento">+</button>
+        </div>
+      </section>
+
+      <section class="budget-panel" aria-label="Progreso de presupuesto">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Presupuesto</p>
+            <h2>${budgetCopy(budgetTone)}</h2>
+          </div>
+          <span>${Math.round(totals.budgetProgress * 100)}%</span>
+        </div>
+        <div class="mega-progress mega-progress--${budgetTone}">
+          <span style="width: ${totals.budgetProgress * 100}%"></span>
+        </div>
+        <div class="budget-metrics">
+          <div><span>Gastado</span><strong>${formatMoney(totals.spent)}</strong></div>
+          <div><span>Ahorro</span><strong>${formatMoney(totals.ahorro)}</strong></div>
+          <div><span>Total recibido</span><strong>${formatMoney(totals.income)}</strong></div>
+        </div>
+        <p class="budget-note">${budgetMessage(totals)}</p>
+      </section>
+
+      <section class="category-section" aria-label="División de gastos">
+        <div class="section-title section-title--plain">
+          <div>
+            <p class="eyebrow">Resumen</p>
+            <h2>División de gastos</h2>
+          </div>
+        </div>
+        <div class="category-grid">
+          ${totals.byCategory.map(categoryCard).join("")}
+        </div>
+      </section>
+
+      <section class="activity-panel" aria-label="Actividad reciente">
+        <div class="section-title">
+          <div>
+            <p class="eyebrow">Hoy y recientes</p>
+            <h2>Movimientos</h2>
+          </div>
+          <button class="text-link-button" type="button" data-tab="activity" aria-label="Ver todos los movimientos">Ver todo</button>
+        </div>
+        ${transactionList(filteredTransactions.slice(0, 4))}
+      </section>
+    </div>
+  `;
+}
+
+function navButton(tab, label, icon) {
+  return `<button class="${state.activeTab === tab ? "active" : ""}" type="button" data-tab="${tab}" aria-label="${label}">${iconSvg(icon)}</button>`;
+}
+
+function categoryCard(category) {
+  return `
+    <article class="category-card">
+      <div class="category-card__top">
+        <span class="category-icon" style="color: ${category.accent}; background-color: ${category.accent}24">${category.icon}</span>
+        <span>${Math.round(category.progress * 100)}%</span>
+      </div>
+      <h3>${category.label}</h3>
+      <strong>${formatMoney(category.spent)}</strong>
+      <div class="mini-progress"><span style="width: ${category.progress * 100}%; background-color: ${category.accent}"></span></div>
+    </article>
+  `;
+}
+
+function creditRow(credit) {
+  const name = escapeHtml(credit.name || "Crédito");
+  return `
+    <article class="credit-row">
+      <span class="category-icon">${iconSvg("credit")}</span>
+      <div>
+        <h3>${name} - ${formatMoney(credit.amount)}</h3>
+      </div>
+    </article>
+  `;
+}
+
+function transactionList(transactions) {
+  if (!transactions.length) return `<p class="empty-state">No hay movimientos con ese filtro.</p>`;
+
+  return `
+    <div class="transaction-list">
+      ${transactions
+        .map((transaction) => {
+          const meta = categoryMeta(transaction.category);
+          return `
+            <article class="transaction-row">
+              <span class="transaction-icon" style="color: ${meta.accent}; background-color: ${meta.accent}22">${transaction.amount > 0 ? "+" : meta.icon}</span>
+              <div>
+                <h3>${escapeHtml(transaction.description)}</h3>
+                <p>${meta.label} · ${escapeHtml(transaction.account)} · ${prettyDate(transaction.date)}</p>
+              </div>
+              <strong class="${transaction.amount > 0 ? "positive" : ""}">${formatMoney(transaction.amount)}</strong>
+              <span class="sync-dot sync-dot--${transaction.syncState}"></span>
+            </article>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function composerTemplate() {
+  const allCategories = [...categories, { key: "income", label: "Ingreso" }];
+  return `
+    <div class="modal-backdrop" role="presentation">
+      <form class="composer" data-action="save-transaction">
+        <div class="composer__head">
+          <div>
+            <p class="eyebrow">Nuevo movimiento</p>
+            <h2>Agregar gasto</h2>
+          </div>
+          <button type="button" data-action="close-composer" aria-label="Cerrar">X</button>
+        </div>
+
+        <label>
+          Descripción
+          <input name="description" placeholder="Super, gasolina, cafe..." required />
+        </label>
+
+        <div class="form-grid">
+          <label>
+            Monto
+            <input name="amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" required />
+          </label>
+          <label>
+            Fecha
+            <input name="date" type="date" value="${today()}" required />
+          </label>
+        </div>
+
+        <div class="segmented" aria-label="Categoria">
+          ${allCategories
+            .map((category) => `<button type="button" class="${state.selectedCategory === category.key ? "active" : ""}" data-category="${category.key}">${category.label}</button>`)
+            .join("")}
+        </div>
+
+        <label>
+          Cuenta
+          <select name="account">
+            <option>Debito</option>
+            <option>Tarjeta Q</option>
+            <option>Tarjeta $</option>
+            <option>Efectivo</option>
+            <option>GYT</option>
+            <option>Ingreso</option>
+          </select>
+        </label>
+
+        <label>
+          Nota
+          <textarea name="note" placeholder="Opcional"></textarea>
+        </label>
+
+        <button class="submit-button" type="submit">Guardar movimiento</button>
+      </form>
+    </div>
+  `;
+}
+
+function bindEvents() {
+  document.querySelectorAll("[data-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.activeTab = button.dataset.tab;
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-action='open-composer']").forEach((button) => {
+    button.addEventListener("click", openComposer);
+  });
+
+  document.querySelectorAll("[data-action='refresh-app']").forEach((button) => {
+    button.addEventListener("click", refreshApp);
+  });
+
+  const clearSearch = document.querySelector("[data-action='clear-search']");
+  if (clearSearch) {
+    clearSearch.addEventListener("click", () => {
+      state.query = "";
+      render();
+    });
+  }
+
+  const search = document.querySelector("[data-action='search']");
+  if (search) {
+    search.addEventListener("input", (event) => {
+      state.query = event.target.value;
+      render();
+    });
+  }
+
+  document.querySelectorAll("[data-action='setting']").forEach((input) => {
+    input.addEventListener("input", (event) => {
+      state.settings[event.target.dataset.setting] = event.target.value;
+      persist();
+    });
+  });
+
+  document.querySelectorAll("[data-action='setting-number']").forEach((input) => {
+    input.addEventListener("input", (event) => {
+      state.settings[event.target.dataset.setting] = Number(event.target.value);
+      persist();
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-theme-choice]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.settings.theme = button.dataset.themeChoice;
+      persist();
+      render();
+    });
+  });
+}
+
+function openComposer() {
+  document.querySelector("#modal-root").innerHTML = composerTemplate();
+  document.querySelector("[data-action='close-composer']").addEventListener("click", closeComposer);
+  document.querySelector("[data-action='save-transaction']").addEventListener("submit", saveTransaction);
+  document.querySelectorAll("[data-category]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedCategory = button.dataset.category;
+      document.querySelectorAll("[data-category]").forEach((item) => item.classList.toggle("active", item === button));
+    });
+  });
+}
+
+function closeComposer() {
+  document.querySelector("#modal-root").innerHTML = "";
+}
+
+async function saveTransaction(event) {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const amount = Number(form.get("amount"));
+  const description = String(form.get("description") || "").trim();
+
+  if (!description || Number.isNaN(amount) || amount <= 0) {
+    showToast("Revisa descripción y monto");
+    return;
+  }
+
+  const transaction = {
+    id: makeId(),
+    date: String(form.get("date")),
+    description,
+    amount: state.selectedCategory === "income" ? amount : -amount,
+    category: state.selectedCategory,
+    account: String(form.get("account")),
+    note: String(form.get("note") || "").trim(),
+    syncState: state.settings.webhookUrl ? "syncing" : "queued",
+  };
+
+  state.transactions = [transaction, ...state.transactions];
+  persist();
+  closeComposer();
+  render();
+
+  try {
+    const synced = await postToSheet(transaction);
+    updateSyncState(transaction.id, synced ? "synced" : "queued");
+    showToast(synced ? "Agregado y enviado a Sheets" : "Guardado en cola local");
+    if (synced) window.setTimeout(refreshSummary, 900);
+  } catch {
+    updateSyncState(transaction.id, "failed");
+    showToast("Guardado, falta reintentar sync");
+  }
+}
+
+function updateSyncState(id, syncState) {
+  state.transactions = state.transactions.map((transaction) => (transaction.id === id ? { ...transaction, syncState } : transaction));
+  persist();
+  render();
+}
+
+async function refreshApp() {
+  const pending = state.transactions.filter((item) => item.syncState === "queued" || item.syncState === "failed");
+  if (pending.length) await retrySync(false);
+  await refreshSummary();
+}
+
+async function retrySync(showDoneToast = true) {
+  const pending = state.transactions.filter((item) => item.syncState === "queued" || item.syncState === "failed");
+  if (!state.settings.webhookUrl) {
+    showToast("Agrega el webhook de Google Sheets");
+    return;
+  }
+  if (!pending.length) {
+    if (showDoneToast) showToast("Todo está sincronizado");
+    return;
+  }
+
+  for (const transaction of pending) {
+    updateSyncState(transaction.id, "syncing");
+    try {
+      const synced = await postToSheet(transaction);
+      updateSyncState(transaction.id, synced ? "synced" : "failed");
+    } catch {
+      updateSyncState(transaction.id, "failed");
+    }
+  }
+
+  if (showDoneToast) showToast("Sync terminado");
+}
+
+async function postToSheet(transaction) {
+  if (!state.settings.webhookUrl.trim()) return false;
+
+  const response = await fetch(state.settings.webhookUrl.trim(), {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({
+      sheetUrl: SHEET_URL,
+      month: monthName(transaction.date),
+      category: transaction.category,
+      date: transaction.date,
+      description: transaction.description,
+      amount: Math.abs(transaction.amount),
+      account: transaction.account,
+      note: transaction.note || "",
+      createdAt: new Date().toISOString(),
+    }),
+  });
+
+  return response.type === "opaque" || response.ok;
+}
+
+async function refreshSummary() {
+  if (!state.settings.webhookUrl.trim()) {
+    showToast("Configura tu webhook para refrescar Sheets");
+    return;
+  }
+
+  try {
+    const summary = await getSummaryFromSheet();
+    state.summary = {
+      ...state.summary,
+      ...summary,
+      categoryTotals: { ...state.summary.categoryTotals, ...(summary.categoryTotals || {}) },
+      updatedAt: new Date().toISOString(),
+    };
+    persist();
+    render();
+    showToast("Dashboard actualizado");
+  } catch {
+    showToast("No pude leer Sheets todavía");
+  }
+}
+
+function getSummaryFromSheet() {
+  return new Promise((resolve, reject) => {
+    const callbackName = `luiWalletSummary_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const script = document.createElement("script");
+    const separator = state.settings.webhookUrl.includes("?") ? "&" : "?";
+
+    window[callbackName] = (payload) => {
+      cleanup();
+      resolve(payload);
+    };
+
+    const cleanup = () => {
+      script.remove();
+      delete window[callbackName];
+      window.clearTimeout(timer);
+    };
+
+    const timer = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("Summary request timed out"));
+    }, 10000);
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("Summary request failed"));
+    };
+
+    script.src = `${state.settings.webhookUrl.trim()}${separator}action=summary&month=${encodeURIComponent(state.summary.month || "Septiembre")}&callback=${callbackName}`;
+    document.body.appendChild(script);
+  });
+}
+
+function showToast(message) {
+  const toastRoot = document.querySelector("#toast-root");
+  toastRoot.innerHTML = `<div class="toast">${escapeHtml(message)}</div>`;
+  window.setTimeout(() => {
+    toastRoot.innerHTML = "";
+  }, 2200);
+}
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js").catch(() => undefined);
+    if (state.settings.webhookUrl) refreshSummary();
+  });
+}
+
 render();
