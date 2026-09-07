@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "node -e \"require('fs').mkdirSync('dist',{recursive:true}); for (const f of ['index.html','app.js','config.js','icons.js','styles.css','manifest.webmanifest','service-worker.js']) require('fs').copyFileSync(f,'dist/'+f)\"",
     "dev": "python3 -m http.server 4173"
   }
 }
