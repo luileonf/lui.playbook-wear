@@ -10,13 +10,14 @@ const {
   defaultSummary,
 } = window.luiWalletConfig;
 const iconSvg = window.luiIconSvg || (() => "");
+const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre"];
 
 const state = {
   activeTab: "home",
   query: "",
   selectedCategory: "fun",
   transactions: load(STORAGE_KEY, initialTransactions),
-  settings: load(SETTINGS_KEY, { webhookUrl: "", monthlyBudget: 10500, monthlyGoal: SAVINGS_GOAL, theme: "dark" }),
+  settings: load(SETTINGS_KEY, { webhookUrl: "", monthlyBudget: 10500, monthlyGoal: SAVINGS_GOAL, theme: "dark", selectedMonth: SHEET_NAME }),
   summary: load(SUMMARY_KEY, defaultSummary),
 };
 
@@ -62,6 +63,10 @@ function shortMoney(value) {
 
 function today() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function activeMonth() {
+  return state.settings.selectedMonth || SHEET_NAME;
 }
 
 function monthName(dateValue) {
@@ -125,7 +130,7 @@ function getTotals() {
     goalProgress,
     byCategory,
     credits,
-    month: summary.month || "Septiembre",
+    month: activeMonth(),
   };
 }
 
@@ -338,7 +343,9 @@ function renderActiveTab({ totals, filteredTransactions, incomeTransactions, que
       <section class="wallet-card" aria-label="Saldo al día">
         <div class="wallet-card__glow"></div>
         <div class="wallet-card__head">
-          <span>${totals.month}</span>
+          <select class="month-select" data-action="select-month" aria-label="Elegir mes">
+            ${MONTHS.map((month) => `<option value="${month}" ${month === totals.month ? "selected" : ""}>${month}</option>`).join("")}
+          </select>
           <div class="wallet-card__head-actions">
             <button class="sync-pill add-pill" type="button" data-action="open-composer" aria-label="Agregar movimiento">+</button>
           </div>
@@ -347,7 +354,6 @@ function renderActiveTab({ totals, filteredTransactions, incomeTransactions, que
         <strong>${formatMoney(totals.available)}</strong>
         <div class="quick-kpis" aria-label="Resumen rápido del mes">
           <div><span>Ahorros</span><b>${formatMoney(totals.ahorro)}</b></div>
-          <div><span>Recibido</span><b>${formatMoney(totals.income)}</b></div>
           <div><span>Gastado</span><b>${formatMoney(totals.spent)}</b></div>
         </div>
       </section>
@@ -379,10 +385,11 @@ function renderActiveTab({ totals, filteredTransactions, incomeTransactions, que
       </section>
 
       <section class="activity-panel" aria-label="Ingresos">
-        <div class="section-title">
+        <div class="section-title income-section-title">
           <div>
             <h2>INGRESOS</h2>
           </div>
+          <strong>${formatMoney(totals.income)}</strong>
         </div>
         ${incomeList(incomeTransactions)}
       </section>
@@ -535,6 +542,15 @@ function bindEvents() {
   document.querySelectorAll("[data-action='refresh-app']").forEach((button) => {
     button.addEventListener("click", refreshApp);
   });
+
+  const monthSelector = document.querySelector("[data-action='select-month']");
+  if (monthSelector) {
+    monthSelector.addEventListener("change", (event) => {
+      state.settings.selectedMonth = event.target.value;
+      persist();
+      refreshSummary();
+    });
+  }
 
   const clearSearch = document.querySelector("[data-action='clear-search']");
   if (clearSearch) {
@@ -723,7 +739,7 @@ async function getSummaryFromSheet() {
 
   return {
     summary: {
-      month: SHEET_NAME,
+      month: activeMonth(),
       saldoAlDia,
       totalReceived,
       totalExpenses,
@@ -773,7 +789,7 @@ function getSheetTable(range) {
     };
 
     const params = new URLSearchParams({
-      sheet: SHEET_NAME,
+      sheet: activeMonth(),
       range,
       headers: "0",
       tqx: `responseHandler:${callbackName}`,

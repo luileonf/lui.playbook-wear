@@ -199,8 +199,8 @@ button {
 
 .wallet-card {
   position: relative;
-  min-height: 292px;
-  padding: 20px 18px 28px;
+  min-height: 248px;
+  padding: 18px;
   overflow: hidden;
   background:
     linear-gradient(135deg, rgba(47, 116, 255, 0.78), rgba(255, 255, 255, 0.08) 46%, rgba(23, 214, 143, 0.2)),
@@ -239,6 +239,19 @@ button {
   color: rgba(255, 255, 255, 0.76);
   font-size: 13px;
   font-weight: 700;
+}
+
+.month-select {
+  max-width: 144px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.2);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .sync-pill {
@@ -291,9 +304,9 @@ button {
 .quick-kpis {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
-  margin-top: 20px;
+  margin-top: 14px;
 }
 
 .quick-kpis div {
@@ -379,6 +392,13 @@ button {
   color: #f7f8fb;
   font-size: 25px;
   font-weight: 900;
+}
+
+.income-section-title strong {
+  color: #a3ff12;
+  font-size: 16px;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .mega-progress,
