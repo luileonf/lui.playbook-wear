@@ -152,8 +152,7 @@ function getFilteredTransactions() {
 
 function getIncomeTransactions() {
   return state.transactions
-    .filter((transaction) => transaction.amount > 0)
-    .sort((a, b) => b.amount - a.amount);
+    .filter((transaction) => transaction.incomeSource === "payments");
 }
 
 function budgetCopy(tone) {
@@ -382,11 +381,10 @@ function renderActiveTab({ totals, filteredTransactions, incomeTransactions, que
       <section class="activity-panel" aria-label="Ingresos">
         <div class="section-title">
           <div>
-            <p class="eyebrow">Ingresos y pagos</p>
-            <h2>Ingresos</h2>
+            <h2>INGRESOS</h2>
           </div>
         </div>
-        ${transactionList(incomeTransactions)}
+        ${incomeList(incomeTransactions)}
       </section>
     </div>
   `;
@@ -442,6 +440,23 @@ function transactionList(transactions) {
             </article>
           `;
         })
+        .join("")}
+    </div>
+  `;
+}
+
+function incomeList(incomes) {
+  if (!incomes.length) return `<p class="empty-state">No hay ingresos registrados.</p>`;
+
+  return `
+    <div class="transaction-list income-list">
+      ${incomes
+        .map((income) => `
+          <article class="transaction-row income-row">
+            <div><h3>${escapeHtml(income.description)}</h3></div>
+            <strong class="${income.pending ? "pending-payment" : "positive"}">${income.pending ? "PENDIENTE DE PAGO" : formatMoney(income.amount)}</strong>
+          </article>
+        `)
         .join("")}
     </div>
   `;
@@ -802,22 +817,20 @@ function sheetTransactions(rows) {
     });
   });
 
-  let incomeSectionEnded = false;
   rows.forEach((row, rowIndex) => {
-    const description = String(cell(rowIndex, 1) || "").trim();
-    const amount = numberOr(cell(rowIndex, 3));
-    if (/total recibido/i.test(description)) {
-      incomeSectionEnded = true;
-      return;
-    }
-    if (incomeSectionEnded || !description || amount <= 0) return;
+    const description = String(cell(rowIndex, 8) || "").trim();
+    if (!description || normalizeText(description) === "nombre") return;
+    const rawAmount = cell(rowIndex, 7);
+    const pending = rawAmount === undefined || rawAmount === null || rawAmount === "";
     transactions.push({
-      id: `sheet-income-${rowIndex}`,
+      id: `sheet-payment-${rowIndex}`,
       date: "2026-09-01",
       description,
-      amount,
+      amount: numberOr(rawAmount),
       category: "income",
-      account: "Ingreso",
+      account: "Pago",
+      incomeSource: "payments",
+      pending,
       syncState: "synced",
     });
   });

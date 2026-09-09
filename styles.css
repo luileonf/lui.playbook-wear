@@ -561,6 +561,21 @@ button {
   color: #a3ff12;
 }
 
+.income-row {
+  min-height: 54px;
+}
+
+.income-row h3 {
+  margin: 0;
+}
+
+.income-row strong.pending-payment {
+  max-width: 132px;
+  color: #ff526f;
+  font-size: 10px;
+  font-weight: 900;
+}
+
 .sync-dot {
   position: absolute;
   right: 7px;
