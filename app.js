@@ -1,5 +1,6 @@
 const {
   sheetUrl: SHEET_URL,
+  sheetName: SHEET_NAME,
   storageKey: STORAGE_KEY,
   settingsKey: SETTINGS_KEY,
   summaryKey: SUMMARY_KEY,
@@ -100,36 +101,20 @@ function getMonthTransactions() {
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
-function getLocalTotals() {
-  const monthTransactions = getMonthTransactions();
-  const income = monthTransactions.filter((item) => item.amount > 0).reduce((sum, item) => sum + item.amount, 0);
-  const spent = Math.abs(monthTransactions.filter((item) => item.amount < 0).reduce((sum, item) => sum + item.amount, 0));
-  const categoryTotals = Object.fromEntries(
-    categories.map((category) => [
-      category.key,
-      Math.abs(monthTransactions.filter((item) => item.category === category.key && item.amount < 0).reduce((sum, item) => sum + item.amount, 0)),
-    ]),
-  );
-
-  return { income, spent, categoryTotals };
-}
-
 function getTotals() {
-  const local = getLocalTotals();
   const summary = { ...defaultSummary, ...state.summary, categoryTotals: { ...defaultSummary.categoryTotals, ...(state.summary.categoryTotals || {}) } };
-  const totalReceived = numberOr(summary.totalReceived, local.income);
-  const totalExpenses = numberOr(summary.totalExpenses, local.spent);
-  const saldoAlDia = numberOr(summary.saldoAlDia, totalReceived - totalExpenses);
+  const totalReceived = numberOr(summary.totalReceived, 0);
+  const totalExpenses = numberOr(summary.totalExpenses, 0);
+  const saldoAlDia = numberOr(summary.saldoAlDia, 0);
   const ahorro = numberOr(summary.ahorro, state.settings.monthlyGoal || SAVINGS_GOAL);
-  const progressBase = totalReceived > 0 ? totalReceived : state.settings.monthlyBudget;
-  const budgetProgress = progressBase > 0 ? clamp((totalReceived - saldoAlDia) / progressBase) : 0;
+  const budgetProgress = totalReceived > 0 ? clamp((totalReceived - saldoAlDia) / totalReceived) : 0;
   const goalProgress = clamp(saldoAlDia / (state.settings.monthlyGoal || SAVINGS_GOAL));
   const byCategory = categories.map((category) => {
-    const spent = numberOr(summary.categoryTotals[category.key], local.categoryTotals[category.key]);
+    const spent = numberOr(summary.categoryTotals[category.key], 0);
     const progress = totalExpenses > 0 ? clamp(spent / totalExpenses) : 0;
     return { ...category, spent, progress };
   });
-  const credits = Array.isArray(summary.credits) && summary.credits.length ? summary.credits : defaultSummary.credits;
+  const credits = Array.isArray(summary.credits) ? summary.credits : defaultSummary.credits;
 
   return {
     income: totalReceived,
@@ -348,17 +333,17 @@ function renderActiveTab({ totals, filteredTransactions, queueCount, budgetTone 
         <div class="wallet-card__glow"></div>
         <div class="wallet-card__head">
           <span>${totals.month}</span>
-          <button class="sync-pill ${queueCount ? "sync-pill--queue" : ""}" type="button" data-action="refresh-app">${queueCount ? `${queueCount} en cola` : "Sheets OK"}</button>
+          <div class="wallet-card__head-actions">
+            <button class="sync-pill add-pill" type="button" data-action="open-composer" aria-label="Agregar movimiento">+</button>
+            <button class="sync-pill ${queueCount ? "sync-pill--queue" : ""}" type="button" data-action="refresh-app">${queueCount ? `${queueCount} en cola` : "Sheets OK"}</button>
+          </div>
         </div>
         <p class="wallet-label">Saldo al día</p>
         <strong>${formatMoney(totals.available)}</strong>
         <div class="quick-kpis" aria-label="Resumen rápido del mes">
-          <div><span>Gastado</span><b>${shortMoney(totals.spent)}</b></div>
+          <div><span>Saldo al día</span><b>${shortMoney(totals.available)}</b></div>
           <div><span>Recibido</span><b>${shortMoney(totals.income)}</b></div>
-          <div><span>Estado</span><b>${Math.round(totals.budgetProgress * 100)}%</b></div>
-        </div>
-        <div class="wallet-actions wallet-actions--single">
-          <button class="add-only-button" type="button" data-action="open-composer" aria-label="Agregar movimiento">+</button>
+          <div><span>Gastado</span><b>${shortMoney(totals.spent)}</b></div>
         </div>
       </section>
 
@@ -372,11 +357,6 @@ function renderActiveTab({ totals, filteredTransactions, queueCount, budgetTone 
         </div>
         <div class="mega-progress mega-progress--${budgetTone}">
           <span style="width: ${totals.budgetProgress * 100}%"></span>
-        </div>
-        <div class="budget-metrics">
-          <div><span>Gastado</span><strong>${formatMoney(totals.spent)}</strong></div>
-          <div><span>Ahorro</span><strong>${formatMoney(totals.ahorro)}</strong></div>
-          <div><span>Total recibido</span><strong>${formatMoney(totals.income)}</strong></div>
         </div>
         <p class="budget-note">${budgetMessage(totals)}</p>
       </section>
@@ -690,19 +670,16 @@ async function postToSheet(transaction) {
 }
 
 async function refreshSummary() {
-  if (!state.settings.webhookUrl.trim()) {
-    showToast("Configura tu webhook para refrescar Sheets");
-    return;
-  }
-
   try {
-    const summary = await getSummaryFromSheet();
+    const { summary, transactions } = await getSummaryFromSheet();
     state.summary = {
-      ...state.summary,
+      ...defaultSummary,
       ...summary,
-      categoryTotals: { ...state.summary.categoryTotals, ...(summary.categoryTotals || {}) },
+      categoryTotals: { ...defaultSummary.categoryTotals, ...(summary.categoryTotals || {}) },
       updatedAt: new Date().toISOString(),
     };
+    const pending = state.transactions.filter((item) => item.syncState === "queued" || item.syncState === "failed" || item.syncState === "syncing");
+    state.transactions = [...pending, ...transactions];
     persist();
     render();
     showToast("Dashboard actualizado");
@@ -711,15 +688,51 @@ async function refreshSummary() {
   }
 }
 
-function getSummaryFromSheet() {
+async function getSummaryFromSheet() {
+  const [table, saldoAlDia, totalReceived, totalExpenses, fixed, necessary, fun, outflow] = await Promise.all([
+    getSheetTable("A1:Z80"),
+    getSheetCell("H20"),
+    getSheetCell("H17"),
+    getSheetCell("O3"),
+    getSheetCell("N5"),
+    getSheetCell("R5"),
+    getSheetCell("V5"),
+    getSheetCell("Z5"),
+  ]);
+
+  return {
+    summary: {
+      month: SHEET_NAME,
+      saldoAlDia,
+      totalReceived,
+      totalExpenses,
+      ahorro: state.settings.monthlyGoal || SAVINGS_GOAL,
+      categoryTotals: { fixed, necessary, fun, outflow },
+      credits: [],
+    },
+    transactions: sheetTransactions(table.rows || []),
+  };
+}
+
+async function getSheetCell(range) {
+  const table = await getSheetTable(range);
+  return numberOr(table.rows?.[0]?.c?.[0]?.v);
+}
+
+function getSheetTable(range) {
   return new Promise((resolve, reject) => {
-    const callbackName = `luiWalletSummary_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const sheetId = SHEET_URL.match(/\/d\/([^/]+)/)?.[1];
+    if (!sheetId) return reject(new Error("Missing spreadsheet ID"));
+    const callbackName = `luiWalletSheet_${Date.now()}_${Math.random().toString(16).slice(2)}`;
     const script = document.createElement("script");
-    const separator = state.settings.webhookUrl.includes("?") ? "&" : "?";
 
     window[callbackName] = (payload) => {
       cleanup();
-      resolve(payload);
+      if (payload?.status !== "ok" || !payload?.table) {
+        reject(new Error("Invalid Sheets response"));
+        return;
+      }
+      resolve(payload.table);
     };
 
     const cleanup = () => {
@@ -738,9 +751,67 @@ function getSummaryFromSheet() {
       reject(new Error("Summary request failed"));
     };
 
-    script.src = `${state.settings.webhookUrl.trim()}${separator}action=summary&month=${encodeURIComponent(state.summary.month || "Septiembre")}&callback=${callbackName}`;
+    const params = new URLSearchParams({
+      sheet: SHEET_NAME,
+      range,
+      headers: "0",
+      tqx: `responseHandler:${callbackName}`,
+    });
+    script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?${params}`;
     document.body.appendChild(script);
   });
+}
+
+function sheetTransactions(rows) {
+  const transactions = [];
+  const cell = (row, column) => rows[row]?.c?.[column]?.v;
+  const dateValue = (value) => {
+    const match = String(value || "").match(/^Date\((\d+),(\d+),(\d+)\)$/);
+    if (!match) return "";
+    const [, year, month, day] = match;
+    return `${year}-${String(Number(month) + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  };
+  const blocks = [
+    { category: "fixed", date: 10, description: 11, amount: 12 },
+    { category: "necessary", date: 14, description: 15, amount: 16 },
+    { category: "fun", date: 18, description: 19, amount: 20 },
+    { category: "outflow", date: 22, description: 23, amount: 24 },
+  ];
+
+  blocks.forEach((block) => {
+    rows.forEach((row, rowIndex) => {
+      const date = dateValue(cell(rowIndex, block.date));
+      const description = String(cell(rowIndex, block.description) || "").trim();
+      const amount = numberOr(cell(rowIndex, block.amount));
+      if (!date || !description || amount <= 0) return;
+      transactions.push({
+        id: `sheet-${block.category}-${rowIndex}`,
+        date,
+        description,
+        amount: -amount,
+        category: block.category,
+        account: "Google Sheets",
+        syncState: "synced",
+      });
+    });
+  });
+
+  rows.forEach((row, rowIndex) => {
+    const description = String(cell(rowIndex, 1) || "").trim();
+    const amount = numberOr(cell(rowIndex, 3));
+    if (!description || amount <= 0 || /total recibido/i.test(description)) return;
+    transactions.push({
+      id: `sheet-income-${rowIndex}`,
+      date: "2026-09-01",
+      description,
+      amount,
+      category: "income",
+      account: "Ingreso",
+      syncState: "synced",
+    });
+  });
+
+  return transactions.sort((a, b) => b.date.localeCompare(a.date));
 }
 
 function showToast(message) {
@@ -754,7 +825,7 @@ function showToast(message) {
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./service-worker.js").catch(() => undefined);
-    if (state.settings.webhookUrl) refreshSummary();
+    refreshSummary();
   });
 }
 
