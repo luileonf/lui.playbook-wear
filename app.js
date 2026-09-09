@@ -802,10 +802,15 @@ function sheetTransactions(rows) {
     });
   });
 
+  let incomeSectionEnded = false;
   rows.forEach((row, rowIndex) => {
     const description = String(cell(rowIndex, 1) || "").trim();
     const amount = numberOr(cell(rowIndex, 3));
-    if (!description || amount <= 0 || /total recibido/i.test(description)) return;
+    if (/total recibido/i.test(description)) {
+      incomeSectionEnded = true;
+      return;
+    }
+    if (incomeSectionEnded || !description || amount <= 0) return;
     transactions.push({
       id: `sheet-income-${rowIndex}`,
       date: "2026-09-01",

@@ -1,4 +1,4 @@
-const CACHE_NAME = "lui-wallet-v6";
+const CACHE_NAME = "lui-wallet-v7";
 const APP_SHELL = ["./", "./index.html", "./config.js", "./app.js", "./icons.js", "./styles.css", "./manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
