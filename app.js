@@ -150,6 +150,12 @@ function getFilteredTransactions() {
   });
 }
 
+function getIncomeTransactions() {
+  return state.transactions
+    .filter((transaction) => transaction.amount > 0)
+    .sort((a, b) => b.amount - a.amount);
+}
+
 function budgetCopy(tone) {
   if (tone === "danger") return "Ojo, revisa antes de gastar más";
   if (tone === "warning") return "Vas cerca del límite";
@@ -179,6 +185,7 @@ function categoryMeta(categoryKey) {
 function render() {
   const totals = getTotals();
   const filteredTransactions = getFilteredTransactions();
+  const incomeTransactions = getIncomeTransactions();
   const queueCount = state.transactions.filter((item) => item.syncState === "queued" || item.syncState === "failed").length;
   const budgetTone = totals.budgetProgress >= 0.9 ? "danger" : totals.budgetProgress >= 0.7 ? "warning" : "good";
 
@@ -196,7 +203,7 @@ function render() {
             </div>
           </header>
 
-          ${renderActiveTab({ totals, filteredTransactions, queueCount, budgetTone })}
+          ${renderActiveTab({ totals, filteredTransactions, incomeTransactions, queueCount, budgetTone })}
 
           <nav class="bottom-nav" aria-label="Navegacion principal">
             ${navButton("home", "Home", "home")}
@@ -228,7 +235,7 @@ function render() {
   bindEvents();
 }
 
-function renderActiveTab({ totals, filteredTransactions, queueCount, budgetTone }) {
+function renderActiveTab({ totals, filteredTransactions, incomeTransactions, queueCount, budgetTone }) {
   if (state.activeTab === "activity") {
     return `
       <div class="view-stack">
@@ -335,15 +342,14 @@ function renderActiveTab({ totals, filteredTransactions, queueCount, budgetTone 
           <span>${totals.month}</span>
           <div class="wallet-card__head-actions">
             <button class="sync-pill add-pill" type="button" data-action="open-composer" aria-label="Agregar movimiento">+</button>
-            <button class="sync-pill ${queueCount ? "sync-pill--queue" : ""}" type="button" data-action="refresh-app">${queueCount ? `${queueCount} en cola` : "Sheets OK"}</button>
           </div>
         </div>
         <p class="wallet-label">Saldo al día</p>
         <strong>${formatMoney(totals.available)}</strong>
         <div class="quick-kpis" aria-label="Resumen rápido del mes">
-          <div><span>Saldo al día</span><b>${shortMoney(totals.available)}</b></div>
-          <div><span>Recibido</span><b>${shortMoney(totals.income)}</b></div>
-          <div><span>Gastado</span><b>${shortMoney(totals.spent)}</b></div>
+          <div><span>Ahorros</span><b>${formatMoney(totals.ahorro)}</b></div>
+          <div><span>Recibido</span><b>${formatMoney(totals.income)}</b></div>
+          <div><span>Gastado</span><b>${formatMoney(totals.spent)}</b></div>
         </div>
       </section>
 
@@ -373,15 +379,14 @@ function renderActiveTab({ totals, filteredTransactions, queueCount, budgetTone 
         </div>
       </section>
 
-      <section class="activity-panel" aria-label="Actividad reciente">
+      <section class="activity-panel" aria-label="Ingresos">
         <div class="section-title">
           <div>
-            <p class="eyebrow">Hoy y recientes</p>
-            <h2>Movimientos</h2>
+            <p class="eyebrow">Ingresos y pagos</p>
+            <h2>Ingresos</h2>
           </div>
-          <button class="text-link-button" type="button" data-tab="activity" aria-label="Ver todos los movimientos">Ver todo</button>
         </div>
-        ${transactionList(filteredTransactions.slice(0, 4))}
+        ${transactionList(incomeTransactions)}
       </section>
     </div>
   `;
@@ -689,11 +694,12 @@ async function refreshSummary() {
 }
 
 async function getSummaryFromSheet() {
-  const [table, saldoAlDia, totalReceived, totalExpenses, fixed, necessary, fun, outflow] = await Promise.all([
+  const [table, saldoAlDia, totalReceived, totalExpenses, ahorro, fixed, necessary, fun, outflow] = await Promise.all([
     getSheetTable("A1:Z80"),
     getSheetCell("H20"),
     getSheetCell("H17"),
     getSheetCell("O3"),
+    getSheetCell("D20"),
     getSheetCell("N5"),
     getSheetCell("R5"),
     getSheetCell("V5"),
@@ -706,7 +712,7 @@ async function getSummaryFromSheet() {
       saldoAlDia,
       totalReceived,
       totalExpenses,
-      ahorro: state.settings.monthlyGoal || SAVINGS_GOAL,
+      ahorro,
       categoryTotals: { fixed, necessary, fun, outflow },
       credits: [],
     },
