@@ -101,8 +101,10 @@ function makeId(prefix = "tx") {
 }
 
 function getMonthTransactions() {
+  const monthIndex = MONTHS.indexOf(activeMonth()) + 1;
+  const monthPrefix = `2026-${String(monthIndex || 9).padStart(2, "0")}`;
   return state.transactions
-    .filter((transaction) => transaction.date.startsWith("2026-09"))
+    .filter((transaction) => transaction.date.startsWith(monthPrefix))
     .sort((a, b) => b.date.localeCompare(a.date));
 }
 
@@ -304,6 +306,7 @@ function renderActiveTab({ totals, filteredTransactions, incomeTransactions, que
             Webhook Apps Script
             <input data-action="setting" data-setting="webhookUrl" value="${escapeHtml(state.settings.webhookUrl)}" placeholder="https://script.google.com/macros/s/..." />
           </label>
+          <p class="settings-hint">${state.settings.webhookUrl ? "Conexión configurada. Guarda primero la nueva versión de Apps Script para editar y eliminar movimientos." : "Sin conexión de escritura: los gastos se guardan solo en este teléfono hasta configurar Apps Script."}</p>
           <a href="${SHEET_URL}" target="_blank" rel="noreferrer">Abrir Gastos 2026</a>
         </section>
         <section class="settings-panel">
@@ -435,6 +438,7 @@ function transactionList(transactions) {
       ${transactions
         .map((transaction) => {
           const meta = categoryMeta(transaction.category);
+          const canManage = transaction.amount < 0 && !transaction.incomeSource;
           return `
             <article class="transaction-row">
               <span class="transaction-icon" style="color: ${meta.accent}; background-color: ${meta.accent}22">${transaction.amount > 0 ? "+" : meta.icon}</span>
@@ -443,6 +447,12 @@ function transactionList(transactions) {
                 <p>${meta.label} · ${escapeHtml(transaction.account)} · ${prettyDate(transaction.date)}</p>
               </div>
               <strong class="${transaction.amount > 0 ? "positive" : ""}">${formatMoney(transaction.amount)}</strong>
+              ${canManage ? `
+                <div class="transaction-actions" aria-label="Acciones para ${escapeHtml(transaction.description)}">
+                  <button type="button" data-action="edit-transaction" data-id="${transaction.id}" aria-label="Editar gasto">${iconSvg("edit")}</button>
+                  <button class="transaction-actions__delete" type="button" data-action="delete-transaction" data-id="${transaction.id}" aria-label="Eliminar gasto">${iconSvg("trash")}</button>
+                </div>
+              ` : ""}
               <span class="sync-dot sync-dot--${transaction.syncState}"></span>
             </article>
           `;
@@ -469,59 +479,56 @@ function incomeList(incomes) {
   `;
 }
 
-function composerTemplate() {
+function composerTemplate(transaction = null) {
   const allCategories = [...categories, { key: "income", label: "Ingreso" }];
+  const editing = Boolean(transaction);
+  const selectedCategory = transaction?.category || state.selectedCategory;
   return `
     <div class="modal-backdrop" role="presentation">
-      <form class="composer" data-action="save-transaction">
+      <form class="composer" data-action="${editing ? "update-transaction" : "save-transaction"}" data-id="${transaction?.id || ""}">
         <div class="composer__head">
           <div>
-            <p class="eyebrow">Nuevo movimiento</p>
-            <h2>Agregar gasto</h2>
+            <p class="eyebrow">${editing ? "Editar movimiento" : "Nuevo movimiento"}</p>
+            <h2>${editing ? "Actualizar gasto" : "Agregar gasto"}</h2>
           </div>
           <button type="button" data-action="close-composer" aria-label="Cerrar">X</button>
         </div>
 
         <label>
           Descripción
-          <input name="description" placeholder="Super, gasolina, cafe..." required />
+          <input name="description" value="${escapeHtml(transaction?.description || "")}" placeholder="Super, gasolina, cafe..." required />
         </label>
 
         <div class="form-grid">
           <label>
             Monto
-            <input name="amount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" required />
+            <input name="amount" type="number" inputmode="decimal" min="0" step="0.01" value="${transaction ? Math.abs(transaction.amount) : ""}" placeholder="0.00" required />
           </label>
           <label>
             Fecha
-            <input name="date" type="date" value="${today()}" required />
+            <input name="date" type="date" value="${transaction?.date || today()}" required />
           </label>
         </div>
 
         <div class="segmented" aria-label="Categoria">
           ${allCategories
-            .map((category) => `<button type="button" class="${state.selectedCategory === category.key ? "active" : ""}" data-category="${category.key}">${category.label}</button>`)
+            .map((category) => `<button type="button" class="${selectedCategory === category.key ? "active" : ""}" data-category="${category.key}" ${editing && category.key !== selectedCategory ? "disabled" : ""}>${category.label}</button>`)
             .join("")}
         </div>
 
         <label>
           Cuenta
-          <select name="account">
-            <option>Debito</option>
-            <option>Tarjeta Q</option>
-            <option>Tarjeta $</option>
-            <option>Efectivo</option>
-            <option>GYT</option>
-            <option>Ingreso</option>
+          <select name="account" ${editing ? "disabled" : ""}>
+            ${["Debito", "Tarjeta Q", "Tarjeta $", "Efectivo", "GYT", "Ingreso"].map((account) => `<option ${account === (transaction?.account || "Debito") ? "selected" : ""}>${account}</option>`).join("")}
           </select>
         </label>
 
         <label>
           Nota
-          <textarea name="note" placeholder="Opcional"></textarea>
+          <textarea name="note" placeholder="Opcional" ${editing ? "disabled" : ""}>${escapeHtml(transaction?.note || "")}</textarea>
         </label>
 
-        <button class="submit-button" type="submit">Guardar movimiento</button>
+        <button class="submit-button" type="submit">${editing ? "Guardar cambios" : "Guardar movimiento"}</button>
       </form>
     </div>
   `;
@@ -537,6 +544,14 @@ function bindEvents() {
 
   document.querySelectorAll("[data-action='open-composer']").forEach((button) => {
     button.addEventListener("click", openComposer);
+  });
+
+  document.querySelectorAll("[data-action='edit-transaction']").forEach((button) => {
+    button.addEventListener("click", () => openTransactionEditor(button.dataset.id));
+  });
+
+  document.querySelectorAll("[data-action='delete-transaction']").forEach((button) => {
+    button.addEventListener("click", () => deleteTransaction(button.dataset.id));
   });
 
   document.querySelectorAll("[data-action='refresh-app']").forEach((button) => {
@@ -604,6 +619,14 @@ function openComposer() {
   });
 }
 
+function openTransactionEditor(id) {
+  const transaction = state.transactions.find((item) => item.id === id);
+  if (!transaction) return;
+  document.querySelector("#modal-root").innerHTML = composerTemplate(transaction);
+  document.querySelector("[data-action='close-composer']").addEventListener("click", closeComposer);
+  document.querySelector("[data-action='update-transaction']").addEventListener("submit", updateTransaction);
+}
+
 function closeComposer() {
   document.querySelector("#modal-root").innerHTML = "";
 }
@@ -636,13 +659,77 @@ async function saveTransaction(event) {
   render();
 
   try {
-    const synced = await postToSheet(transaction);
+    const synced = await postToSheet(transaction, "create");
     updateSyncState(transaction.id, synced ? "synced" : "queued");
     showToast(synced ? "Agregado y enviado a Sheets" : "Guardado en cola local");
     if (synced) window.setTimeout(refreshSummary, 900);
   } catch {
     updateSyncState(transaction.id, "failed");
     showToast("Guardado, falta reintentar sync");
+  }
+}
+
+async function updateTransaction(event) {
+  event.preventDefault();
+  const existing = state.transactions.find((item) => item.id === event.currentTarget.dataset.id);
+  if (!existing) return;
+  const form = new FormData(event.currentTarget);
+  const amount = Number(form.get("amount"));
+  const description = String(form.get("description") || "").trim();
+
+  if (!description || Number.isNaN(amount) || amount <= 0) {
+    showToast("Revisa descripción y monto");
+    return;
+  }
+  if (!state.settings.webhookUrl.trim()) {
+    showToast("Configura Apps Script para editar en Sheets");
+    return;
+  }
+
+  const updated = { ...existing, description, date: String(form.get("date")), amount: -amount, syncState: "syncing" };
+  state.transactions = state.transactions.map((item) => (item.id === updated.id ? updated : item));
+  persist();
+  closeComposer();
+  render();
+
+  try {
+    const synced = await postToSheet(updated, "update");
+    updateSyncState(updated.id, synced ? "synced" : "failed");
+    showToast(synced ? "Cambios enviados a Sheets" : "No pude actualizar Sheets");
+    if (synced) window.setTimeout(refreshSummary, 900);
+  } catch {
+    updateSyncState(updated.id, "failed");
+    showToast("No pude actualizar Sheets");
+  }
+}
+
+async function deleteTransaction(id) {
+  const transaction = state.transactions.find((item) => item.id === id);
+  if (!transaction) return;
+  if (!window.confirm(`Eliminar “${transaction.description}”?`)) return;
+
+  if (!transaction.sheetRow) {
+    state.transactions = state.transactions.filter((item) => item.id !== id);
+    persist();
+    render();
+    showToast("Movimiento eliminado localmente");
+    return;
+  }
+  if (!state.settings.webhookUrl.trim()) {
+    showToast("Configura Apps Script para eliminar en Sheets");
+    return;
+  }
+
+  try {
+    const synced = await postToSheet(transaction, "delete");
+    if (!synced) throw new Error("Delete failed");
+    state.transactions = state.transactions.filter((item) => item.id !== id);
+    persist();
+    render();
+    showToast("Movimiento eliminado de Sheets");
+    window.setTimeout(refreshSummary, 900);
+  } catch {
+    showToast("No pude eliminar en Sheets");
   }
 }
 
@@ -672,7 +759,7 @@ async function retrySync(showDoneToast = true) {
   for (const transaction of pending) {
     updateSyncState(transaction.id, "syncing");
     try {
-      const synced = await postToSheet(transaction);
+      const synced = await postToSheet(transaction, "create");
       updateSyncState(transaction.id, synced ? "synced" : "failed");
     } catch {
       updateSyncState(transaction.id, "failed");
@@ -682,7 +769,7 @@ async function retrySync(showDoneToast = true) {
   if (showDoneToast) showToast("Sync terminado");
 }
 
-async function postToSheet(transaction) {
+async function postToSheet(transaction, operation) {
   if (!state.settings.webhookUrl.trim()) return false;
 
   const response = await fetch(state.settings.webhookUrl.trim(), {
@@ -690,9 +777,11 @@ async function postToSheet(transaction) {
     mode: "no-cors",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify({
+      operation,
       sheetUrl: SHEET_URL,
-      month: monthName(transaction.date),
+      month: activeMonth(),
       category: transaction.category,
+      row: transaction.sheetRow || null,
       date: transaction.date,
       description: transaction.description,
       amount: Math.abs(transaction.amount),
@@ -828,6 +917,7 @@ function sheetTransactions(rows) {
         amount: -amount,
         category: block.category,
         account: "Google Sheets",
+        sheetRow: rowIndex + 1,
         syncState: "synced",
       });
     });

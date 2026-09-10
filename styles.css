@@ -581,6 +581,38 @@ button {
   color: #a3ff12;
 }
 
+.transaction-actions {
+  display: flex;
+  flex: 0 0 auto !important;
+  gap: 5px;
+}
+
+.transaction-actions button {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  color: var(--text-soft);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.transaction-actions button svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.transaction-actions .transaction-actions__delete {
+  color: #ff526f;
+}
+
+.transaction-row:has(.transaction-actions) strong {
+  max-width: 78px;
+}
+
 .income-row {
   min-height: 54px;
 }
@@ -824,6 +856,14 @@ button {
   font-size: 13px;
   font-weight: 800;
   text-decoration: none;
+}
+
+.settings-hint {
+  margin: -3px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .bottom-nav {

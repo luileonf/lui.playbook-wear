@@ -26,11 +26,11 @@ No requiere build. La app vive en `index.html`, `app.js`, `styles.css`, `manifes
 
 ## Google Sheets Sync
 
-La app no guarda credenciales privadas de Google en el navegador. Para que el botón **Guardar movimiento** escriba en tu Google Sheet, crea un webhook con Google Apps Script:
+La app no guarda credenciales privadas de Google en el navegador. Para que **Guardar movimiento**, editar y eliminar escriban en tu Google Sheet, crea un webhook con Google Apps Script:
 
 1. Abre tu Google Sheet.
 2. Ve a **Extensions > Apps Script**.
-3. Pega este script.
+3. Reemplaza el contenido por el archivo [`apps-script.gs`](./apps-script.gs) de este repositorio. La versión anterior solo agregaba filas; esta versión también actualiza y elimina.
 4. Deploy > New deployment > Web app.
 5. Ejecutar como: tu usuario. Acceso: solo tu usuario o quien corresponda.
 6. Copia el URL `/exec` y pégalo en **Ajustes > Webhook Apps Script** dentro de la app.
