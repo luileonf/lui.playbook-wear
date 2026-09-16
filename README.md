@@ -93,7 +93,7 @@ function getSummary(month) {
     saldoAlDia: value(sheet, "H20"),
     totalReceived: value(sheet, "H17"),
     totalExpenses: valueBelowLabel(sheet, "TOTAL DE GASTOS"),
-    ahorro: value(sheet, "D27") || value(sheet, "D26"),
+    ahorro: value(sheet, "D32"),
     categoryTotals: {
       fixed: value(sheet, "N5"),
       necessary: value(sheet, "R5"),
@@ -149,6 +149,6 @@ La versión inicial queda lista para conectarse a Google Sheets. El resumen del 
 - Pestañas mensuales: Enero a Septiembre.
 - Septiembre usa bloques para ingresos, gastos fijos, gastos necesarios, pendejos y salidas.
 - La captura rápida manda `month`, `category`, `date`, `description`, `amount`, `account` y `note` al webhook.
-- El dashboard lee `Saldo al día` desde `H20`, `Total recibido` desde `H17`, `Ahorro` desde `D27` o `D26`, y `Gastado` desde el valor debajo de `TOTAL DE GASTOS`.
+- El dashboard lee `Saldo al día` desde `H20`, `Total recibido` desde `H17`, `Ahorro` desde `D32`, y `Gastado` desde el valor debajo de `TOTAL DE GASTOS`.
 - La división de gastos lee `N5` para Fijos, `R5` para Necesarios, `V5` para Pendejos y `Z5` para Salidas.
 - La lista de créditos se puede ajustar en `CREDIT_RANGE`; debe tener nombre en la primera columna y monto en la segunda.

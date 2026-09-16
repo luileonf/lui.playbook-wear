@@ -819,7 +819,7 @@ async function getSummaryFromSheet() {
     getSheetCell("H20"),
     getSheetCell("H17"),
     getSheetCell("O3"),
-    getSheetCell("D20"),
+    getSheetCell("D32"),
     getSheetCell("N5"),
     getSheetCell("R5"),
     getSheetCell("V5"),
