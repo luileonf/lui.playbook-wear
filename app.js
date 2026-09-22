@@ -406,7 +406,7 @@ function navButton(tab, label, icon) {
 
 function categoryCard(category) {
   return `
-    <article class="category-card">
+    <button class="category-card category-card--button" type="button" data-action="open-category" data-category="${category.key}" aria-label="Ver gastos de ${category.label}">
       <div class="category-card__top">
         <span class="category-icon" style="color: ${category.accent}; background-color: ${category.accent}24">${category.icon}</span>
         <span>${Math.round(category.progress * 100)}%</span>
@@ -414,7 +414,35 @@ function categoryCard(category) {
       <h3>${category.label}</h3>
       <strong>${formatMoney(category.spent)}</strong>
       <div class="mini-progress"><span style="width: ${category.progress * 100}%; background-color: ${category.accent}"></span></div>
-    </article>
+    </button>
+  `;
+}
+
+function categoryDetailTemplate(categoryKey) {
+  const category = categories.find((item) => item.key === categoryKey);
+  if (!category) return "";
+  const total = getTotals().byCategory.find((item) => item.key === categoryKey)?.spent || 0;
+  const transactions = getMonthTransactions().filter((transaction) => transaction.category === categoryKey && transaction.amount < 0);
+
+  return `
+    <div class="modal-backdrop" role="presentation">
+      <section class="category-detail" role="dialog" aria-modal="true" aria-label="Gastos de ${category.label}">
+        <div class="composer__head">
+          <div>
+            <p class="eyebrow">${activeMonth()}</p>
+            <h2>${category.label}</h2>
+          </div>
+          <button type="button" data-action="close-category" aria-label="Cerrar">X</button>
+        </div>
+        <div class="category-detail__total">
+          <span>Total gastado</span>
+          <strong>${formatMoney(total)}</strong>
+        </div>
+        <div class="category-detail__list">
+          ${transactionList(transactions)}
+        </div>
+      </section>
+    </div>
   `;
 }
 
@@ -546,6 +574,10 @@ function bindEvents() {
     button.addEventListener("click", openComposer);
   });
 
+  document.querySelectorAll("[data-action='open-category']").forEach((button) => {
+    button.addEventListener("click", () => openCategoryDetail(button.dataset.category));
+  });
+
   document.querySelectorAll("[data-action='edit-transaction']").forEach((button) => {
     button.addEventListener("click", () => openTransactionEditor(button.dataset.id));
   });
@@ -616,6 +648,18 @@ function openComposer() {
       state.selectedCategory = button.dataset.category;
       document.querySelectorAll("[data-category]").forEach((item) => item.classList.toggle("active", item === button));
     });
+  });
+}
+
+function openCategoryDetail(categoryKey) {
+  const modalRoot = document.querySelector("#modal-root");
+  modalRoot.innerHTML = categoryDetailTemplate(categoryKey);
+  modalRoot.querySelector("[data-action='close-category']")?.addEventListener("click", closeComposer);
+  modalRoot.querySelectorAll("[data-action='edit-transaction']").forEach((button) => {
+    button.addEventListener("click", () => openTransactionEditor(button.dataset.id));
+  });
+  modalRoot.querySelectorAll("[data-action='delete-transaction']").forEach((button) => {
+    button.addEventListener("click", () => deleteTransaction(button.dataset.id));
   });
 }
 
