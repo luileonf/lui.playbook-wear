@@ -751,18 +751,109 @@ button {
 }
 
 .insight-hero {
-  display: flex;
-  gap: 12px;
   padding: 16px;
   color: #07100c;
   background: linear-gradient(135deg, #a3ff12, #17d68f);
 }
 
+.insight-hero h2 {
+  margin: 0 0 8px;
+  font-size: 21px;
+  line-height: 1.1;
+}
+
 .insight-hero p {
   margin: 0;
-  font-size: 18px;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.insight-hero .eyebrow {
+  margin-bottom: 8px;
+  color: rgba(7, 16, 12, 0.68);
+}
+
+.plan-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.plan-metric,
+.plan-allocation {
+  padding: 13px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+}
+
+.plan-metric span {
+  display: block;
+  min-height: 29px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.plan-metric strong {
+  display: block;
+  margin-top: 5px;
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: 13px;
   font-weight: 900;
-  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-allocation__note {
+  margin: -3px 0 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.plan-allocation__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plan-allocation__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 11px;
+  border-radius: 8px;
+  background: var(--row-bg);
+}
+
+.plan-allocation__row span {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.plan-allocation__row i {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+}
+
+.plan-allocation__row strong {
+  flex: 0 0 auto;
+  color: var(--text-strong);
+  font-size: 14px;
+  font-weight: 900;
 }
 
 .insight-row {
@@ -1154,6 +1245,8 @@ button {
 .app-canvas[data-theme="light"] .category-card,
 .app-canvas[data-theme="light"] .activity-panel,
 .app-canvas[data-theme="light"] .settings-panel,
+.app-canvas[data-theme="light"] .plan-metric,
+.app-canvas[data-theme="light"] .plan-allocation,
 .app-canvas[data-theme="light"] .credit-list,
 .app-canvas[data-theme="light"] .goal-card {
   box-shadow: 0 18px 48px rgba(22, 32, 50, 0.08);

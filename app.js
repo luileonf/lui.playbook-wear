@@ -174,12 +174,44 @@ function budgetMessage(totals) {
   return `Vas bien, aún tienes margen. Saldo al día: ${formatMoney(totals.available)}.`;
 }
 
-function getAiAdvice(totals) {
-  const highest = totals.byCategory.slice().sort((a, b) => b.spent - a.spent)[0];
-  if (totals.budgetProgress >= 0.9) return `Prioriza pagos fijos y pausa extras: tu saldo al día bajó a ${formatMoney(totals.available)}.`;
-  if (totals.budgetProgress >= 0.7) return `Cuida ${highest.label.toLowerCase()}: es donde más se está moviendo el gasto este mes.`;
-  if (totals.available >= SAVINGS_GOAL) return `Buen ritmo: tienes margen para proteger tu meta de ${formatMoney(SAVINGS_GOAL)}.`;
-  return "Vas estable; si hoy evitas gastos pequeños, el ahorro sube más rápido.";
+function getMonthPlan(totals) {
+  const selectedMonthIndex = MONTHS.indexOf(activeMonth());
+  const now = new Date();
+  const currentMonthIndex = now.getMonth();
+  const daysInSelectedMonth = new Date(now.getFullYear(), selectedMonthIndex + 1, 0).getDate();
+  const daysRemaining = selectedMonthIndex === currentMonthIndex ? Math.max(1, daysInSelectedMonth - now.getDate() + 1) : daysInSelectedMonth;
+  const monthlyLimit = Math.max(0, numberOr(state.settings.monthlyBudget));
+  const available = Math.max(0, totals.available);
+  const limitRemaining = Math.max(0, monthlyLimit - totals.spent);
+  const overLimit = Math.max(0, totals.spent - monthlyLimit);
+  const spendable = monthlyLimit > 0 ? Math.min(available, limitRemaining) : available;
+  const dailyLimit = spendable / daysRemaining;
+
+  const headline = overLimit > 0
+    ? `Ya superaste tu límite por ${formatMoney(overLimit)}.`
+    : `Puedes gastar hasta ${formatMoney(spendable)} este mes.`;
+  const message = overLimit > 0
+    ? `Aunque tu saldo es ${formatMoney(available)}, para cerrar ${activeMonth()} dentro del límite de ${formatMoney(monthlyLimit)} mantén los gastos no esenciales en Q 0.`
+    : `Te quedan ${daysRemaining} ${daysRemaining === 1 ? "día" : "días"}. Mantén un tope de ${formatMoney(dailyLimit)} por día para cerrar ${activeMonth()} dentro de tu presupuesto.`;
+
+  return {
+    available,
+    monthlyLimit,
+    limitRemaining,
+    overLimit,
+    spendable,
+    dailyLimit,
+    daysRemaining,
+    headline,
+    message,
+    allocations: [
+      { label: "Fijos", value: spendable * 0.25, accent: "#2f74ff" },
+      { label: "Necesarios", value: spendable * 0.5, accent: "#17d68f" },
+      { label: "Pendejos", value: spendable * 0.1, accent: "#ff3f6c" },
+      { label: "Salidas", value: spendable * 0.05, accent: "#f9c74f" },
+      { label: "Reserva", value: spendable * 0.1, accent: "#a3ff12" },
+    ],
+  };
 }
 
 function categoryMeta(categoryKey) {
@@ -192,6 +224,7 @@ function render() {
   const totals = getTotals();
   const filteredTransactions = getFilteredTransactions();
   const incomeTransactions = getIncomeTransactions();
+  const monthPlan = getMonthPlan(totals);
   const queueCount = state.transactions.filter((item) => item.syncState === "queued" || item.syncState === "failed").length;
   const budgetTone = totals.budgetProgress >= 0.9 ? "danger" : totals.budgetProgress >= 0.7 ? "warning" : "good";
 
@@ -209,7 +242,7 @@ function render() {
             </div>
           </header>
 
-          ${renderActiveTab({ totals, filteredTransactions, incomeTransactions, queueCount, budgetTone })}
+          ${renderActiveTab({ totals, filteredTransactions, incomeTransactions, queueCount, budgetTone, monthPlan })}
 
           <nav class="bottom-nav" aria-label="Navegacion principal">
             ${navButton("home", "Home", "home")}
@@ -223,7 +256,7 @@ function render() {
 
       <aside class="desktop-summary" aria-label="Resumen del dashboard">
         <p class="eyebrow">Personal finance</p>
-        <h2>${getAiAdvice(totals)}</h2>
+        <h2>${monthPlan.headline}</h2>
         <p>${budgetCopy(budgetTone)}. El flujo del mes marca ${formatMoney(totals.income)} recibido y ${formatMoney(totals.spent)} gastado.</p>
         <div class="desktop-kpis">
           <span>${formatMoney(totals.available)} saldo al día</span>
@@ -241,7 +274,7 @@ function render() {
   bindEvents();
 }
 
-function renderActiveTab({ totals, filteredTransactions, incomeTransactions, queueCount, budgetTone }) {
+function renderActiveTab({ totals, filteredTransactions, incomeTransactions, queueCount, budgetTone, monthPlan }) {
   if (state.activeTab === "activity") {
     return `
       <div class="view-stack">
@@ -268,24 +301,40 @@ function renderActiveTab({ totals, filteredTransactions, incomeTransactions, que
     return `
       <div class="view-stack">
         <section class="insight-hero">
-          <span>AI</span>
-          <p>${getAiAdvice(totals)}</p>
+          <p class="eyebrow">Plan para cerrar ${activeMonth()}</p>
+          <h2>${monthPlan.headline}</h2>
+          <p>${monthPlan.message}</p>
         </section>
-        <section class="credit-list" aria-label="Créditos">
+        <section class="plan-metrics" aria-label="Límites de gasto">
+          <article class="plan-metric">
+            <span>Saldo disponible</span>
+            <strong>${formatMoney(monthPlan.available)}</strong>
+          </article>
+          <article class="plan-metric">
+            <span>Gasto máximo</span>
+            <strong>${formatMoney(monthPlan.spendable)}</strong>
+          </article>
+          <article class="plan-metric">
+            <span>Tope diario</span>
+            <strong>${formatMoney(monthPlan.dailyLimit)}</strong>
+          </article>
+        </section>
+        <section class="plan-allocation" aria-label="Plan de gasto recomendado">
           <div class="section-title">
             <div>
-              <p class="eyebrow">Créditos</p>
-              <h2>Nombre - monto</h2>
+              <p class="eyebrow">Distribución sugerida</p>
+              <h2>Cómo repartir ${formatMoney(monthPlan.spendable)}</h2>
             </div>
           </div>
-          ${totals.credits.map(creditRow).join("")}
-        </section>
-        <section class="goal-card">
-          <div>
-            <p class="eyebrow">Meta de ahorro</p>
-            <h2>${formatMoney(totals.available)} / ${formatMoney(SAVINGS_GOAL)}</h2>
+          <p class="plan-allocation__note">Son topes para lo que queda del mes. La reserva no se gasta.</p>
+          <div class="plan-allocation__rows">
+            ${monthPlan.allocations.map((item) => `
+              <div class="plan-allocation__row">
+                <span><i style="background-color: ${item.accent}"></i>${item.label}</span>
+                <strong>${formatMoney(item.value)}</strong>
+              </div>
+            `).join("")}
           </div>
-          <div class="ring" style="--ring: ${totals.goalProgress * 360}deg">${Math.round(totals.goalProgress * 100)}%</div>
         </section>
       </div>
     `;
