@@ -196,11 +196,11 @@ function getMonthPlan(totals) {
     headline,
     message,
     allocations: [
-      { label: "Fijos", value: 0, accent: "#2f74ff", note: "ya pagados" },
-      { label: "Necesarios", value: available * 0.55, accent: "#17d68f" },
-      { label: "Pendejos", value: available * 0.1, accent: "#ff3f6c" },
-      { label: "Salidas", value: available * 0.15, accent: "#f9c74f" },
-      { label: "Reserva", value: reserve, accent: "#a3ff12" },
+      { label: "Fijos", value: 0, percent: 0, accent: "#2f74ff", note: "ya pagados" },
+      { label: "Necesarios", value: available * 0.55, percent: 55, accent: "#17d68f" },
+      { label: "Pendejos", value: available * 0.1, percent: 10, accent: "#ff3f6c" },
+      { label: "Salidas", value: available * 0.15, percent: 15, accent: "#f9c74f" },
+      { label: "Reserva", value: reserve, percent: 20, accent: "#a3ff12" },
     ],
   };
 }
@@ -321,7 +321,7 @@ function renderActiveTab({ totals, filteredTransactions, incomeTransactions, que
           <div class="plan-allocation__rows">
             ${monthPlan.allocations.map((item) => `
               <div class="plan-allocation__row">
-                <span><i style="background-color: ${item.accent}"></i>${item.label}${item.note ? `<small>${item.note}</small>` : ""}</span>
+                <span><i style="background-color: ${item.accent}"></i>${item.label}<small>${item.percent}%${item.note ? ` · ${item.note}` : ""}</small></span>
                 <strong>${formatMoney(item.value)}</strong>
               </div>
             `).join("")}
