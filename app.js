@@ -175,41 +175,32 @@ function budgetMessage(totals) {
 }
 
 function getMonthPlan(totals) {
-  const selectedMonthIndex = MONTHS.indexOf(activeMonth());
+  const selectedMonthIndex = Math.max(0, MONTHS.indexOf(activeMonth()));
   const now = new Date();
   const currentMonthIndex = now.getMonth();
   const daysInSelectedMonth = new Date(now.getFullYear(), selectedMonthIndex + 1, 0).getDate();
   const daysRemaining = selectedMonthIndex === currentMonthIndex ? Math.max(1, daysInSelectedMonth - now.getDate() + 1) : daysInSelectedMonth;
-  const monthlyLimit = Math.max(0, numberOr(state.settings.monthlyBudget));
   const available = Math.max(0, totals.available);
-  const limitRemaining = Math.max(0, monthlyLimit - totals.spent);
-  const overLimit = Math.max(0, totals.spent - monthlyLimit);
-  const spendable = monthlyLimit > 0 ? Math.min(available, limitRemaining) : available;
+  const reserve = available * 0.2;
+  const spendable = Math.max(0, available - reserve);
   const dailyLimit = spendable / daysRemaining;
-
-  const headline = overLimit > 0
-    ? `Ya superaste tu límite por ${formatMoney(overLimit)}.`
-    : `Puedes gastar hasta ${formatMoney(spendable)} este mes.`;
-  const message = overLimit > 0
-    ? `Aunque tu saldo es ${formatMoney(available)}, para cerrar ${activeMonth()} dentro del límite de ${formatMoney(monthlyLimit)} mantén los gastos no esenciales en Q 0.`
-    : `Te quedan ${daysRemaining} ${daysRemaining === 1 ? "día" : "días"}. Mantén un tope de ${formatMoney(dailyLimit)} por día para cerrar ${activeMonth()} dentro de tu presupuesto.`;
+  const headline = `Tienes ${formatMoney(available)} para administrar.`;
+  const message = `Como los gastos fijos ya se cubrieron al inicio del mes, no les aparto saldo ahora. Deja ${formatMoney(reserve)} como reserva y usa hasta ${formatMoney(dailyLimit)} por día.`;
 
   return {
     available,
-    monthlyLimit,
-    limitRemaining,
-    overLimit,
     spendable,
+    reserve,
     dailyLimit,
     daysRemaining,
     headline,
     message,
     allocations: [
-      { label: "Fijos", value: spendable * 0.25, accent: "#2f74ff" },
-      { label: "Necesarios", value: spendable * 0.5, accent: "#17d68f" },
-      { label: "Pendejos", value: spendable * 0.1, accent: "#ff3f6c" },
-      { label: "Salidas", value: spendable * 0.05, accent: "#f9c74f" },
-      { label: "Reserva", value: spendable * 0.1, accent: "#a3ff12" },
+      { label: "Fijos", value: 0, accent: "#2f74ff", note: "ya pagados" },
+      { label: "Necesarios", value: available * 0.55, accent: "#17d68f" },
+      { label: "Pendejos", value: available * 0.1, accent: "#ff3f6c" },
+      { label: "Salidas", value: available * 0.15, accent: "#f9c74f" },
+      { label: "Reserva", value: reserve, accent: "#a3ff12" },
     ],
   };
 }
@@ -311,7 +302,7 @@ function renderActiveTab({ totals, filteredTransactions, incomeTransactions, que
             <strong>${formatMoney(monthPlan.available)}</strong>
           </article>
           <article class="plan-metric">
-            <span>Gasto máximo</span>
+            <span>Para gastar</span>
             <strong>${formatMoney(monthPlan.spendable)}</strong>
           </article>
           <article class="plan-metric">
@@ -326,11 +317,11 @@ function renderActiveTab({ totals, filteredTransactions, incomeTransactions, que
               <h2>Cómo repartir ${formatMoney(monthPlan.spendable)}</h2>
             </div>
           </div>
-          <p class="plan-allocation__note">Son topes para lo que queda del mes. La reserva no se gasta.</p>
+          <p class="plan-allocation__note">Usa estos topes sobre tu saldo actual. La reserva se mantiene intacta.</p>
           <div class="plan-allocation__rows">
             ${monthPlan.allocations.map((item) => `
               <div class="plan-allocation__row">
-                <span><i style="background-color: ${item.accent}"></i>${item.label}</span>
+                <span><i style="background-color: ${item.accent}"></i>${item.label}${item.note ? `<small>${item.note}</small>` : ""}</span>
                 <strong>${formatMoney(item.value)}</strong>
               </div>
             `).join("")}
