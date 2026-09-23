@@ -584,18 +584,6 @@ function composerTemplate(transaction = null) {
             .join("")}
         </div>
 
-        <label>
-          Cuenta
-          <select name="account" ${editing ? "disabled" : ""}>
-            ${["Debito", "Tarjeta Q", "Tarjeta $", "Efectivo", "GYT", "Ingreso"].map((account) => `<option ${account === (transaction?.account || "Debito") ? "selected" : ""}>${account}</option>`).join("")}
-          </select>
-        </label>
-
-        <label>
-          Nota
-          <textarea name="note" placeholder="Opcional" ${editing ? "disabled" : ""}>${escapeHtml(transaction?.note || "")}</textarea>
-        </label>
-
         <button class="submit-button" type="submit">${editing ? "Guardar cambios" : "Guardar movimiento"}</button>
       </form>
     </div>
@@ -732,8 +720,8 @@ async function saveTransaction(event) {
     description,
     amount: state.selectedCategory === "income" ? amount : -amount,
     category: state.selectedCategory,
-    account: String(form.get("account")),
-    note: String(form.get("note") || "").trim(),
+    account: "App",
+    note: "",
     syncState: state.settings.webhookUrl ? "syncing" : "queued",
   };
 

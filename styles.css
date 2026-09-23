@@ -173,9 +173,13 @@ button {
   gap: 16px;
   height: calc(100vh - 220px);
   max-height: 646px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: scroll;
   padding: 0 14px 172px;
   scroll-padding-bottom: 172px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
   scrollbar-width: none;
 }
 
