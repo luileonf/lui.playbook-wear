@@ -10,7 +10,8 @@ const {
   defaultSummary,
 } = window.luiWalletConfig;
 const iconSvg = window.luiIconSvg || (() => "");
-const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre"];
+const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+const ACTIVE_YEAR = new Date().getFullYear();
 
 const state = {
   activeTab: "home",
@@ -102,7 +103,7 @@ function makeId(prefix = "tx") {
 
 function getMonthTransactions() {
   const monthIndex = MONTHS.indexOf(activeMonth()) + 1;
-  const monthPrefix = `2026-${String(monthIndex || 9).padStart(2, "0")}`;
+  const monthPrefix = `${ACTIVE_YEAR}-${String(monthIndex || 1).padStart(2, "0")}`;
   return state.transactions
     .filter((transaction) => transaction.date.startsWith(monthPrefix))
     .sort((a, b) => b.date.localeCompare(a.date));
@@ -622,7 +623,9 @@ function bindEvents() {
   if (monthSelector) {
     monthSelector.addEventListener("change", (event) => {
       state.settings.selectedMonth = event.target.value;
+      state.summary = { ...defaultSummary, month: activeMonth(), updatedAt: "" };
       persist();
+      render();
       refreshSummary();
     });
   }
@@ -881,7 +884,7 @@ async function refreshSummary() {
     render();
     showToast("Dashboard actualizado");
   } catch {
-    showToast("No pude leer Sheets todavía");
+    showToast(`Aún no existe la pestaña ${activeMonth()} en Sheets`);
   }
 }
 
