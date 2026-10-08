@@ -1,6 +1,7 @@
 window.luiWalletConfig = {
   sheetUrl: "https://docs.google.com/spreadsheets/d/1FjFrjkNb_7QENGgM4eCU0OnouztzCG6o4yTY7Z60_JQ/edit",
   sheetName: "Septiembre",
+  webhookUrl: "https://script.google.com/macros/s/AKfycbzcM0gFDR1M-fh2lwmukOwpekCIT9iEbPIvsV1yKMhBNhjeJiwSRrELo1DFt5KljX01/exec",
   storageKey: "lui-wallet-transactions-sheet-v1",
   settingsKey: "lui-wallet-settings",
   summaryKey: "lui-wallet-summary-sheet-v1",

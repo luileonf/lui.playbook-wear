@@ -1,6 +1,7 @@
 const {
   sheetUrl: SHEET_URL,
   sheetName: SHEET_NAME,
+  webhookUrl: DEFAULT_WEBHOOK_URL = "",
   storageKey: STORAGE_KEY,
   settingsKey: SETTINGS_KEY,
   summaryKey: SUMMARY_KEY,
@@ -12,15 +13,18 @@ const {
 const iconSvg = window.luiIconSvg || (() => "");
 const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 const ACTIVE_YEAR = new Date().getFullYear();
+const DEFAULT_SETTINGS = { webhookUrl: DEFAULT_WEBHOOK_URL, monthlyBudget: 10500, monthlyGoal: SAVINGS_GOAL, theme: "dark", selectedMonth: SHEET_NAME };
 
 const state = {
   activeTab: "home",
   query: "",
   selectedCategory: "fun",
   transactions: load(STORAGE_KEY, initialTransactions),
-  settings: load(SETTINGS_KEY, { webhookUrl: "", monthlyBudget: 10500, monthlyGoal: SAVINGS_GOAL, theme: "dark", selectedMonth: SHEET_NAME }),
+  settings: load(SETTINGS_KEY, DEFAULT_SETTINGS),
   summary: load(SUMMARY_KEY, defaultSummary),
 };
+
+if (!state.settings.webhookUrl && DEFAULT_WEBHOOK_URL) state.settings.webhookUrl = DEFAULT_WEBHOOK_URL;
 
 const moneyFormatter = new Intl.NumberFormat("es-GT", { style: "currency", currency: "GTQ", maximumFractionDigits: 2 });
 const compactFormatter = new Intl.NumberFormat("es-GT", { style: "currency", currency: "GTQ", notation: "compact", maximumFractionDigits: 1 });
