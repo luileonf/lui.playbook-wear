@@ -893,30 +893,35 @@ async function refreshSummary() {
 }
 
 async function getSummaryFromSheet() {
-  const table = await getSheetTable("A1:AJ80");
+  const [table, saldoAlDia, totalReceived, ahorro, fixed, necessary, fun, outflow] = await Promise.all([
+    getSheetTable("A1:AJ80"),
+    getSheetCell("H20"),
+    getSheetCell("H17"),
+    getSheetCell("D32"),
+    getSheetCell("N5"),
+    getSheetCell("R5"),
+    getSheetCell("V5"),
+    getSheetCell("Z5"),
+  ]);
   const totalExpenses = tableValueBelowLabel(table, "Total de gastos");
 
   return {
     summary: {
       month: activeMonth(),
-      saldoAlDia: tableCellValue(table, 20, 8),
-      totalReceived: tableCellValue(table, 17, 8),
-      totalExpenses: totalExpenses ?? tableCellValue(table, 3, 15),
-      ahorro: tableCellValue(table, 32, 4),
-      categoryTotals: {
-        fixed: tableCellValue(table, 5, 14),
-        necessary: tableCellValue(table, 5, 18),
-        fun: tableCellValue(table, 5, 22),
-        outflow: tableCellValue(table, 5, 26),
-      },
+      saldoAlDia,
+      totalReceived,
+      totalExpenses: totalExpenses ?? 0,
+      ahorro,
+      categoryTotals: { fixed, necessary, fun, outflow },
       credits: [],
     },
     transactions: sheetTransactions(table.rows || []),
   };
 }
 
-function tableCellValue(table, row, column) {
-  return numberOr(table.rows?.[row - 1]?.c?.[column - 1]?.v);
+async function getSheetCell(range) {
+  const table = await getSheetTable(range);
+  return numberOr(table.rows?.[0]?.c?.[0]?.v);
 }
 
 function tableValueBelowLabel(table, label) {
