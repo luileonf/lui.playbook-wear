@@ -895,13 +895,13 @@ async function refreshSummary() {
 async function getSummaryFromSheet() {
   const [table, saldoAlDia, totalReceived, ahorro, fixed, necessary, fun, outflow] = await Promise.all([
     getSheetTable("A1:AJ80"),
-    getSheetCell("H20"),
-    getSheetCell("H17"),
-    getSheetCell("D32"),
-    getSheetCell("N5"),
-    getSheetCell("R5"),
-    getSheetCell("V5"),
-    getSheetCell("Z5"),
+    getFirstSheetValue(["H20", "G20"]),
+    getFirstSheetValue(["H17", "G17"]),
+    getFirstSheetValue(["D32", "C32"]),
+    getFirstSheetValue(["N5", "M5"]),
+    getFirstSheetValue(["R5", "Q5"]),
+    getFirstSheetValue(["V5", "U5"]),
+    getFirstSheetValue(["Z5", "Y5"]),
   ]);
   const totalExpenses = tableValueBelowLabel(table, "Total de gastos");
 
@@ -910,7 +910,7 @@ async function getSummaryFromSheet() {
       month: activeMonth(),
       saldoAlDia,
       totalReceived,
-      totalExpenses: totalExpenses ?? 0,
+      totalExpenses: totalExpenses ?? await getFirstSheetValue(["O3", "N3"]),
       ahorro,
       categoryTotals: { fixed, necessary, fun, outflow },
       credits: [],
@@ -922,6 +922,15 @@ async function getSummaryFromSheet() {
 async function getSheetCell(range) {
   const table = await getSheetTable(range);
   return numberOr(table.rows?.[0]?.c?.[0]?.v);
+}
+
+async function getFirstSheetValue(ranges) {
+  for (const range of ranges) {
+    const table = await getSheetTable(range);
+    const value = table.rows?.[0]?.c?.[0]?.v;
+    if (value !== undefined && value !== null && value !== "") return numberOr(value);
+  }
+  return 0;
 }
 
 function tableValueBelowLabel(table, label) {
