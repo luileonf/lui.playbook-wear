@@ -904,6 +904,13 @@ async function getSummaryFromSheet() {
     getFirstSheetValue(["Z5", "Y5"]),
   ]);
   const totalExpenses = tableValueBelowLabel(table, "Total de gastos");
+  const transactions = sheetTransactions(table.rows || []);
+  const movementTotals = transactions.reduce((totals, transaction) => {
+    if (transaction.amount < 0 && Object.hasOwn(totals, transaction.category)) {
+      totals[transaction.category] += Math.abs(transaction.amount);
+    }
+    return totals;
+  }, { fixed: 0, necessary: 0, fun: 0, outflow: 0 });
 
   return {
     summary: {
@@ -912,10 +919,15 @@ async function getSummaryFromSheet() {
       totalReceived,
       totalExpenses: totalExpenses ?? await getFirstSheetValue(["O3", "N3"]),
       ahorro,
-      categoryTotals: { fixed, necessary, fun, outflow },
+      categoryTotals: {
+        fixed: movementTotals.fixed || fixed,
+        necessary: movementTotals.necessary || necessary,
+        fun: movementTotals.fun || fun,
+        outflow: movementTotals.outflow || outflow,
+      },
       credits: [],
     },
-    transactions: sheetTransactions(table.rows || []),
+    transactions,
   };
 }
 
